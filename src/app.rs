@@ -10,6 +10,7 @@ use crate::error::AppResult;
 use crate::output::print_json;
 use crate::project::init_project_config;
 use crate::status::run_status;
+use crate::update::run_update;
 use crate::upload::run_upload;
 
 fn auth_mode_label(mode: crate::config::AuthMode) -> &'static str {
@@ -29,6 +30,7 @@ pub async fn run(cli: Cli) -> AppResult<()> {
         Commands::Doctor(args) => run_doctor(args, &config_manager),
         Commands::Auth { command } => run_auth(command, &config_manager).await,
         Commands::Status(args) => run_status(args, &config_manager).await,
+        Commands::Update(args) => run_update(args, &config_manager).await,
         Commands::Upload(args) => run_upload(args, &config_manager).await,
     }
 }

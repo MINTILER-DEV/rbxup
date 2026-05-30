@@ -9,6 +9,7 @@ mod output;
 mod project;
 mod roblox;
 mod status;
+mod update;
 mod upload;
 
 use clap::Parser;

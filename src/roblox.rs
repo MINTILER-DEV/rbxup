@@ -20,6 +20,16 @@ pub struct CreateAssetParams {
     pub content_type: &'static str,
 }
 
+#[derive(Debug, Clone)]
+pub struct UpdateAssetParams {
+    pub asset_id: String,
+    pub asset_type: String,
+    pub creator: CreatorTarget,
+    pub file_name: String,
+    pub file_bytes: Vec<u8>,
+    pub content_type: &'static str,
+}
+
 #[derive(Clone)]
 pub struct RobloxAssetsClient {
     client: reqwest::Client,
@@ -63,48 +73,50 @@ impl RobloxAssetsClient {
             .text("request", request_json)
             .part("fileContent", file_part);
 
-        let response = self
-            .auth_provider
-            .apply(self.client.post(ASSET_CREATE_URL))
-            .multipart(form)
-            .send()
-            .await
-            .map_err(|error| AppError::upload(format!("failed to send upload request: {error}")))?;
-        let status = response.status();
+        self.send_asset_request(
+            self.auth_provider.apply(self.client.post(ASSET_CREATE_URL)),
+            form,
+            "upload",
+        )
+        .await
+    }
 
-        if status.is_success() {
-            return response
-                .json::<CreateAssetResponse>()
-                .await
-                .map_err(|error| {
-                    AppError::upload(format!(
-                        "upload succeeded but the response was invalid: {error}"
-                    ))
-                });
-        }
+    pub async fn update_asset(&self, params: UpdateAssetParams) -> AppResult<CreateAssetResponse> {
+        let request_body = UpdateAssetRequest {
+            asset_id: params.asset_id.clone(),
+            asset_type: params.asset_type,
+            creation_context: CreationContext {
+                creator: RequestCreator {
+                    user_id: params.creator.user_id().map(ToOwned::to_owned),
+                    group_id: params.creator.group_id().map(ToOwned::to_owned),
+                },
+            },
+        };
+        let request_json = serde_json::to_string(&request_body).map_err(|error| {
+            AppError::general(format!("failed to serialize update request: {error}"))
+        })?;
+        let file_part = Part::bytes(params.file_bytes)
+            .file_name(params.file_name)
+            .mime_str(params.content_type)
+            .map_err(|error| {
+                AppError::invalid_args(format!(
+                    "failed to prepare file content type {}: {error}",
+                    params.content_type
+                ))
+            })?;
+        let form = Form::new()
+            .text("request", request_json)
+            .part("fileContent", file_part);
 
-        let body = response
-            .text()
-            .await
-            .unwrap_or_else(|_| "<response body unavailable>".to_string());
-        let body = body.trim();
-        let message = format!(
-            "Roblox upload failed with HTTP {}: {}",
-            status.as_u16(),
-            if body.is_empty() {
-                "<empty response body>"
-            } else {
-                body
-            }
-        );
-
-        if status.as_u16() == 401 || status.as_u16() == 403 {
-            Err(AppError::auth(message))
-        } else if status.as_u16() == 429 {
-            Err(AppError::rate_limited(message))
-        } else {
-            Err(AppError::upload(message))
-        }
+        self.send_asset_request(
+            self.auth_provider.apply(
+                self.client
+                    .patch(format!("{ASSET_CREATE_URL}/{}", params.asset_id)),
+            ),
+            form,
+            "update",
+        )
+        .await
     }
 
     pub async fn get_operation(&self, operation_id: &str) -> AppResult<AssetOperation> {
@@ -153,6 +165,52 @@ impl RobloxAssetsClient {
             Err(AppError::general(message))
         }
     }
+
+    async fn send_asset_request(
+        &self,
+        request: reqwest::RequestBuilder,
+        form: Form,
+        action: &str,
+    ) -> AppResult<CreateAssetResponse> {
+        let response = request.multipart(form).send().await.map_err(|error| {
+            AppError::upload(format!("failed to send {action} request: {error}"))
+        })?;
+        let status = response.status();
+
+        if status.is_success() {
+            return response
+                .json::<CreateAssetResponse>()
+                .await
+                .map_err(|error| {
+                    AppError::upload(format!(
+                        "{action} succeeded but the response was invalid: {error}"
+                    ))
+                });
+        }
+
+        let body = response
+            .text()
+            .await
+            .unwrap_or_else(|_| "<response body unavailable>".to_string());
+        let body = body.trim();
+        let message = format!(
+            "Roblox {action} failed with HTTP {}: {}",
+            status.as_u16(),
+            if body.is_empty() {
+                "<empty response body>"
+            } else {
+                body
+            }
+        );
+
+        if status.as_u16() == 401 || status.as_u16() == 403 {
+            Err(AppError::auth(message))
+        } else if status.as_u16() == 429 {
+            Err(AppError::rate_limited(message))
+        } else {
+            Err(AppError::upload(message))
+        }
+    }
 }
 
 #[derive(Debug, Serialize)]
@@ -163,6 +221,16 @@ struct CreateAssetRequest {
     display_name: String,
     #[serde(rename = "description", skip_serializing_if = "Option::is_none")]
     description: Option<String>,
+    #[serde(rename = "creationContext")]
+    creation_context: CreationContext,
+}
+
+#[derive(Debug, Serialize)]
+struct UpdateAssetRequest {
+    #[serde(rename = "assetId")]
+    asset_id: String,
+    #[serde(rename = "assetType")]
+    asset_type: String,
     #[serde(rename = "creationContext")]
     creation_context: CreationContext,
 }

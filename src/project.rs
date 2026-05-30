@@ -5,7 +5,7 @@ use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
 
-use crate::cli::{UploadAssetType, UploadCommand, UploadOutput};
+use crate::cli::{UpdateCommand, UploadAssetType, UploadCommand, UploadOutput};
 use crate::error::{AppError, AppResult};
 
 pub const PROJECT_CONFIG_FILE_NAME: &str = "rbxup.toml";
@@ -73,6 +73,12 @@ pub struct ResolvedUploadSettings {
     pub output: Option<UploadOutput>,
     pub concurrency: Option<usize>,
     pub name_template: Option<String>,
+}
+
+#[derive(Debug, Clone)]
+pub struct ResolvedUpdateSettings {
+    pub creator: Option<String>,
+    pub asset_type: Option<UploadAssetType>,
 }
 
 pub fn load_project_context(profile_name: Option<&str>) -> AppResult<Option<ProjectContext>> {
@@ -208,6 +214,25 @@ impl ProjectContext {
                 .clone()
                 .or_else(|| profile.and_then(|value| value.upload.name_template.clone()))
                 .or_else(|| self.config.defaults.upload.name_template.clone()),
+        }
+    }
+
+    pub fn resolve_update_settings(&self, args: &UpdateCommand) -> ResolvedUpdateSettings {
+        let profile = self
+            .profile_name
+            .as_ref()
+            .and_then(|name| self.config.profiles.get(name));
+
+        ResolvedUpdateSettings {
+            creator: args
+                .creator
+                .clone()
+                .or_else(|| profile.and_then(|value| value.creator.clone()))
+                .or_else(|| self.config.defaults.creator.clone()),
+            asset_type: args
+                .asset_type
+                .or_else(|| profile.and_then(|value| value.asset_type))
+                .or(self.config.defaults.asset_type),
         }
     }
 

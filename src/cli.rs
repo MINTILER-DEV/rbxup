@@ -35,6 +35,8 @@ pub enum Commands {
     },
     /// Check the status of an upload operation
     Status(StatusCommand),
+    /// Update an existing asset
+    Update(UpdateCommand),
 }
 
 #[derive(Debug, Clone, clap::Args)]
@@ -111,6 +113,35 @@ pub struct StatusCommand {
     /// Stdout output mode
     #[arg(long, value_enum, default_value_t = StatusOutput::Json)]
     pub output: StatusOutput,
+}
+
+#[derive(Debug, Clone, clap::Args)]
+pub struct UpdateCommand {
+    /// Roblox asset ID
+    pub asset_id: String,
+    /// File path to upload as the next version
+    pub path: PathBuf,
+    /// Explicit Roblox asset type
+    #[arg(long = "type", value_enum)]
+    pub asset_type: Option<UploadAssetType>,
+    /// Upload owner, for example user:123 or group:456
+    #[arg(long)]
+    pub creator: Option<String>,
+    /// Project config profile from rbxup.toml
+    #[arg(long)]
+    pub profile: Option<String>,
+    /// Wait for the operation to finish and return the final asset
+    #[arg(long = "yield")]
+    pub yield_until_done: bool,
+    /// Maximum amount of time to wait when --yield is enabled
+    #[arg(long, value_parser = parse_duration)]
+    pub timeout: Option<Duration>,
+    /// Delay between status polls when --yield is enabled
+    #[arg(long, value_parser = parse_duration)]
+    pub poll_interval: Option<Duration>,
+    /// Stdout output mode
+    #[arg(long, value_enum)]
+    pub output: Option<UploadOutput>,
 }
 
 #[derive(Debug, Subcommand)]

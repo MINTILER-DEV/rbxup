@@ -1,10 +1,12 @@
 use reqwest::multipart::{Form, Part};
 use serde::{Deserialize, Serialize};
+use std::collections::BTreeMap;
 
 use crate::creator::CreatorTarget;
 use crate::error::{AppError, AppResult};
 
 const ASSET_CREATE_URL: &str = "https://apis.roblox.com/assets/v1/assets";
+const ASSET_OPERATION_URL: &str = "https://apis.roblox.com/assets/v1/operations";
 
 #[derive(Debug, Clone)]
 pub struct CreateAssetParams {
@@ -104,6 +106,51 @@ impl RobloxAssetsClient {
             Err(AppError::upload(message))
         }
     }
+
+    pub async fn get_operation(&self, operation_id: &str) -> AppResult<AssetOperation> {
+        let normalized_id = normalize_operation_id(operation_id);
+        let response = self
+            .client
+            .get(format!("{ASSET_OPERATION_URL}/{normalized_id}"))
+            .header("x-api-key", &self.api_key)
+            .send()
+            .await
+            .map_err(|error| {
+                AppError::general(format!("failed to fetch operation status: {error}"))
+            })?;
+        let status = response.status();
+
+        if status.is_success() {
+            return response.json::<AssetOperation>().await.map_err(|error| {
+                AppError::general(format!(
+                    "operation status succeeded but the response was invalid: {error}"
+                ))
+            });
+        }
+
+        let body = response
+            .text()
+            .await
+            .unwrap_or_else(|_| "<response body unavailable>".to_string());
+        let body = body.trim();
+        let message = format!(
+            "Roblox status request failed with HTTP {}: {}",
+            status.as_u16(),
+            if body.is_empty() {
+                "<empty response body>"
+            } else {
+                body
+            }
+        );
+
+        if status.as_u16() == 401 || status.as_u16() == 403 {
+            Err(AppError::auth(message))
+        } else if status.as_u16() == 429 {
+            Err(AppError::rate_limited(message))
+        } else {
+            Err(AppError::general(message))
+        }
+    }
 }
 
 #[derive(Debug, Serialize)]
@@ -134,4 +181,92 @@ struct RequestCreator {
 #[derive(Debug, Deserialize)]
 pub struct CreateAssetResponse {
     pub path: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AssetOperation {
+    pub path: String,
+    pub done: bool,
+    #[serde(default)]
+    pub response: Option<AssetOperationResponse>,
+    #[serde(default)]
+    pub error: Option<serde_json::Value>,
+    #[serde(default)]
+    pub metadata: Option<serde_json::Value>,
+}
+
+impl AssetOperation {
+    pub fn asset_id(&self) -> Option<&str> {
+        self.response.as_ref()?.asset_id.as_deref()
+    }
+
+    pub fn error_message(&self) -> Option<String> {
+        let error = self.error.as_ref()?;
+
+        if let Some(message) = error.get("message").and_then(|value| value.as_str()) {
+            return Some(message.to_string());
+        }
+
+        if let Some(message) = error.get("error").and_then(|value| value.as_str()) {
+            return Some(message.to_string());
+        }
+
+        Some(error.to_string())
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AssetOperationResponse {
+    #[serde(rename = "@type", default)]
+    pub type_url: Option<String>,
+    #[serde(default)]
+    pub path: Option<String>,
+    #[serde(rename = "revisionId", default)]
+    pub revision_id: Option<String>,
+    #[serde(rename = "revisionCreateTime", default)]
+    pub revision_create_time: Option<String>,
+    #[serde(rename = "assetId", default)]
+    pub asset_id: Option<String>,
+    #[serde(rename = "displayName", default)]
+    pub display_name: Option<String>,
+    #[serde(default)]
+    pub description: Option<String>,
+    #[serde(rename = "assetType", default)]
+    pub asset_type: Option<String>,
+    #[serde(rename = "creationContext", default)]
+    pub creation_context: Option<serde_json::Value>,
+    #[serde(rename = "moderationResult", default)]
+    pub moderation_result: Option<serde_json::Value>,
+    #[serde(flatten)]
+    pub extra: BTreeMap<String, serde_json::Value>,
+}
+
+fn normalize_operation_id(operation_id: &str) -> String {
+    let trimmed = operation_id.trim();
+
+    if let Some(value) = trimmed.strip_prefix("operations/") {
+        value.to_string()
+    } else if let Some((_, value)) = trimmed.rsplit_once("/operations/") {
+        value.to_string()
+    } else {
+        trimmed.to_string()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::normalize_operation_id;
+
+    #[test]
+    fn strips_operations_prefix() {
+        assert_eq!(normalize_operation_id("operations/abc123"), "abc123");
+    }
+
+    #[test]
+    fn strips_full_url_prefix() {
+        assert_eq!(
+            normalize_operation_id("https://apis.roblox.com/assets/v1/operations/abc123"),
+            "abc123"
+        );
+    }
 }

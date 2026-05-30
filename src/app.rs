@@ -6,6 +6,7 @@ use crate::creator::CreatorTarget;
 use crate::doctor::DoctorReport;
 use crate::error::{AppError, AppResult};
 use crate::output::print_json;
+use crate::status::run_status;
 use crate::upload::run_upload;
 
 pub async fn run(cli: Cli) -> AppResult<()> {
@@ -15,9 +16,7 @@ pub async fn run(cli: Cli) -> AppResult<()> {
         Commands::Config { command } => run_config(command, &config_manager),
         Commands::Doctor(args) => run_doctor(args, &config_manager),
         Commands::Auth { command } => run_auth(command),
-        Commands::Status { operation_id } => Err(AppError::general(format!(
-            "status is planned for phase 3. Operation requested: {operation_id}"
-        ))),
+        Commands::Status(args) => run_status(args, &config_manager).await,
         Commands::Upload(args) => run_upload(args, &config_manager).await,
     }
 }

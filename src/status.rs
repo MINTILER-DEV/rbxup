@@ -1,0 +1,71 @@
+use crate::cli::{StatusCommand, StatusOutput};
+use crate::config::{ConfigManager, SecretStore};
+use crate::error::{AppError, AppResult};
+use crate::output::print_json;
+use crate::roblox::{AssetOperation, RobloxAssetsClient};
+
+pub async fn run_status<S: SecretStore>(
+    args: StatusCommand,
+    config_manager: &ConfigManager<S>,
+) -> AppResult<()> {
+    let api_key = config_manager.get_api_key()?.ok_or_else(|| {
+        AppError::auth("no API key configured. Run `rbxup config set api-key <key>`")
+    })?;
+    let client = RobloxAssetsClient::new(api_key);
+    let operation = client.get_operation(&args.operation_id).await?;
+
+    match args.output {
+        StatusOutput::Json => print_json(&operation),
+        StatusOutput::Id => print_operation_asset_id(&operation),
+        StatusOutput::Pretty => {
+            println!("Operation ID: {}", operation.path);
+            println!("Done: {}", operation.done);
+            println!(
+                "Asset ID: {}",
+                operation.asset_id().unwrap_or("<unavailable>")
+            );
+
+            if let Some(response) = &operation.response {
+                if let Some(display_name) = &response.display_name {
+                    println!("Display Name: {display_name}");
+                }
+
+                if let Some(asset_type) = &response.asset_type {
+                    println!("Asset Type: {asset_type}");
+                }
+            }
+
+            if let Some(message) = operation.error_message() {
+                println!("Error: {message}");
+            }
+
+            Ok(())
+        }
+    }
+}
+
+pub fn print_operation_asset_id(operation: &AssetOperation) -> AppResult<()> {
+    if let Some(message) = operation.error_message() {
+        return Err(AppError::upload(format!(
+            "operation {} failed: {message}",
+            operation.path
+        )));
+    }
+
+    let asset_id = operation.asset_id().ok_or_else(|| {
+        if operation.done {
+            AppError::upload(format!(
+                "operation {} completed without an asset ID",
+                operation.path
+            ))
+        } else {
+            AppError::general(format!(
+                "operation {} is still running; asset ID is not available yet",
+                operation.path
+            ))
+        }
+    })?;
+
+    println!("{asset_id}");
+    Ok(())
+}

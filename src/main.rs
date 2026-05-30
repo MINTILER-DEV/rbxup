@@ -6,6 +6,7 @@ mod doctor;
 mod error;
 mod output;
 mod roblox;
+mod status;
 mod upload;
 
 use clap::Parser;

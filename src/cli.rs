@@ -29,11 +29,8 @@ pub enum Commands {
         #[command(subcommand)]
         command: AuthCommand,
     },
-    /// Future operation lookup flow
-    Status {
-        /// Operation ID like operations/abc123
-        operation_id: String,
-    },
+    /// Check the status of an upload operation
+    Status(StatusCommand),
 }
 
 #[derive(Debug, clap::Args)]
@@ -55,6 +52,15 @@ pub struct UploadCommand {
     /// Stdout output mode
     #[arg(long, value_enum, default_value_t = UploadOutput::Job)]
     pub output: UploadOutput,
+}
+
+#[derive(Debug, clap::Args)]
+pub struct StatusCommand {
+    /// Operation ID like operations/abc123
+    pub operation_id: String,
+    /// Stdout output mode
+    #[arg(long, value_enum, default_value_t = StatusOutput::Json)]
+    pub output: StatusOutput,
 }
 
 #[derive(Debug, Subcommand)]
@@ -101,6 +107,13 @@ pub enum UploadAssetType {
 pub enum UploadOutput {
     Job,
     Json,
+    Pretty,
+}
+
+#[derive(Debug, Clone, Copy, ValueEnum)]
+pub enum StatusOutput {
+    Json,
+    Id,
     Pretty,
 }
 

@@ -25,7 +25,7 @@ pub enum Commands {
     },
     /// Check local setup health
     Doctor(DoctorArgs),
-    /// Future OAuth login flow
+    /// Manage OAuth authentication
     Auth {
         #[command(subcommand)]
         command: AuthCommand,
@@ -154,6 +154,12 @@ pub enum StatusOutput {
     Pretty,
 }
 
+#[derive(Debug, Clone, Copy, ValueEnum)]
+pub enum AuthOutput {
+    Json,
+    Pretty,
+}
+
 fn parse_duration(value: &str) -> Result<Duration, String> {
     humantime::parse_duration(value).map_err(|error| format!("invalid duration `{value}`: {error}"))
 }
@@ -171,7 +177,26 @@ mod tests {
 
 #[derive(Debug, Subcommand)]
 pub enum AuthCommand {
-    Login,
+    Login(AuthLoginCommand),
     Logout,
-    Whoami,
+    Whoami(AuthWhoamiCommand),
+}
+
+#[derive(Debug, Clone, clap::Args)]
+pub struct AuthLoginCommand {
+    /// Roblox OAuth client ID. Stored in config after a successful login.
+    #[arg(long)]
+    pub client_id: Option<String>,
+    /// Local callback port, which must match a registered redirect URL.
+    #[arg(long)]
+    pub redirect_port: Option<u16>,
+    /// OAuth scopes to request. Defaults to openid,profile,asset:write
+    #[arg(long = "scope", value_delimiter = ',')]
+    pub scopes: Vec<String>,
+}
+
+#[derive(Debug, Clone, clap::Args)]
+pub struct AuthWhoamiCommand {
+    #[arg(long, value_enum, default_value_t = AuthOutput::Json)]
+    pub output: AuthOutput,
 }

@@ -8,19 +8,47 @@ use serde::{Deserialize, Serialize};
 use crate::error::{AppError, AppResult};
 
 const APP_NAME: &str = "rbxup";
-const API_KEY_ACCOUNT: &str = "default";
+const API_KEY_ACCOUNT: &str = "api-key";
+const OAUTH_SESSION_ACCOUNT: &str = "oauth-session";
 const API_KEY_ENV: &str = "RBXUP_API_KEY";
 const CREATOR_ENV: &str = "RBXUP_CREATOR";
+const OAUTH_CLIENT_ID_ENV: &str = "RBXUP_OAUTH_CLIENT_ID";
+const OAUTH_REDIRECT_PORT_ENV: &str = "RBXUP_OAUTH_REDIRECT_PORT";
+const AUTH_MODE_ENV: &str = "RBXUP_AUTH_MODE";
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct AppConfig {
     #[serde(default)]
     pub default_creator: Option<String>,
+    #[serde(default)]
+    pub auth: AuthConfig,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct AuthConfig {
+    #[serde(default)]
+    pub mode: AuthMode,
+    #[serde(default)]
+    pub oauth_client_id: Option<String>,
+    #[serde(default)]
+    pub oauth_redirect_port: Option<u16>,
+}
+
+#[derive(Debug, Clone, Copy, Default, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum AuthMode {
+    ApiKey,
+    OAuth,
+    #[default]
+    Auto,
 }
 
 pub trait SecretStore {
     fn get_api_key(&self) -> AppResult<Option<String>>;
     fn set_api_key(&self, api_key: &str) -> AppResult<()>;
+    fn get_oauth_session(&self) -> AppResult<Option<String>>;
+    fn set_oauth_session(&self, session_json: &str) -> AppResult<()>;
+    fn delete_oauth_session(&self) -> AppResult<()>;
 }
 
 #[derive(Debug, Clone, Default)]
@@ -34,26 +62,54 @@ impl SystemSecretStore {
 
 impl SecretStore for SystemSecretStore {
     fn get_api_key(&self) -> AppResult<Option<String>> {
-        let entry = Entry::new(APP_NAME, API_KEY_ACCOUNT)
-            .map_err(|error| AppError::config(format!("failed to open keyring entry: {error}")))?;
-
-        match entry.get_password() {
-            Ok(value) => Ok(Some(value)),
-            Err(keyring::Error::NoEntry) => Ok(None),
-            Err(error) => Err(AppError::config(format!(
-                "failed to read API key from keyring: {error}"
-            ))),
-        }
+        read_keyring_secret(API_KEY_ACCOUNT)
     }
 
     fn set_api_key(&self, api_key: &str) -> AppResult<()> {
-        let entry = Entry::new(APP_NAME, API_KEY_ACCOUNT)
+        write_keyring_secret(API_KEY_ACCOUNT, api_key)
+    }
+
+    fn get_oauth_session(&self) -> AppResult<Option<String>> {
+        read_keyring_secret(OAUTH_SESSION_ACCOUNT)
+    }
+
+    fn set_oauth_session(&self, session_json: &str) -> AppResult<()> {
+        write_keyring_secret(OAUTH_SESSION_ACCOUNT, session_json)
+    }
+
+    fn delete_oauth_session(&self) -> AppResult<()> {
+        let entry = Entry::new(APP_NAME, OAUTH_SESSION_ACCOUNT)
             .map_err(|error| AppError::config(format!("failed to open keyring entry: {error}")))?;
 
-        entry
-            .set_password(api_key)
-            .map_err(|error| AppError::config(format!("failed to store API key: {error}")))
+        match entry.delete_credential() {
+            Ok(()) | Err(keyring::Error::NoEntry) => Ok(()),
+            Err(error) => Err(AppError::config(format!(
+                "failed to delete OAuth session: {error}"
+            ))),
+        }
     }
+}
+
+fn read_keyring_secret(account: &str) -> AppResult<Option<String>> {
+    let entry = Entry::new(APP_NAME, account)
+        .map_err(|error| AppError::config(format!("failed to open keyring entry: {error}")))?;
+
+    match entry.get_password() {
+        Ok(value) => Ok(Some(value)),
+        Err(keyring::Error::NoEntry) => Ok(None),
+        Err(error) => Err(AppError::config(format!(
+            "failed to read secret from keyring: {error}"
+        ))),
+    }
+}
+
+fn write_keyring_secret(account: &str, value: &str) -> AppResult<()> {
+    let entry = Entry::new(APP_NAME, account)
+        .map_err(|error| AppError::config(format!("failed to open keyring entry: {error}")))?;
+
+    entry
+        .set_password(value)
+        .map_err(|error| AppError::config(format!("failed to store secret: {error}")))
 }
 
 #[derive(Debug, Clone)]
@@ -136,6 +192,18 @@ impl<S: SecretStore> ConfigManager<S> {
         self.secret_store.set_api_key(api_key)
     }
 
+    pub fn get_oauth_session(&self) -> AppResult<Option<String>> {
+        self.secret_store.get_oauth_session()
+    }
+
+    pub fn set_oauth_session(&self, session_json: &str) -> AppResult<()> {
+        self.secret_store.set_oauth_session(session_json)
+    }
+
+    pub fn clear_oauth_session(&self) -> AppResult<()> {
+        self.secret_store.delete_oauth_session()
+    }
+
     pub fn resolve_creator(&self, config: &AppConfig) -> AppResult<Option<String>> {
         match env::var(CREATOR_ENV) {
             Ok(value) if !value.trim().is_empty() => Ok(Some(value)),
@@ -144,6 +212,53 @@ impl<S: SecretStore> ConfigManager<S> {
                 "failed to read {CREATOR_ENV}: {error}"
             ))),
         }
+    }
+
+    pub fn resolve_auth_mode(&self, config: &AppConfig) -> AppResult<AuthMode> {
+        match env::var(AUTH_MODE_ENV) {
+            Ok(value) => parse_auth_mode(&value),
+            Err(env::VarError::NotPresent) => Ok(config.auth.mode),
+            Err(error) => Err(AppError::config(format!(
+                "failed to read {AUTH_MODE_ENV}: {error}"
+            ))),
+        }
+    }
+
+    pub fn resolve_oauth_client_id(&self, config: &AppConfig) -> AppResult<Option<String>> {
+        match env::var(OAUTH_CLIENT_ID_ENV) {
+            Ok(value) if !value.trim().is_empty() => Ok(Some(value)),
+            Ok(_) | Err(env::VarError::NotPresent) => Ok(config.auth.oauth_client_id.clone()),
+            Err(error) => Err(AppError::config(format!(
+                "failed to read {OAUTH_CLIENT_ID_ENV}: {error}"
+            ))),
+        }
+    }
+
+    pub fn resolve_oauth_redirect_port(&self, config: &AppConfig) -> AppResult<Option<u16>> {
+        match env::var(OAUTH_REDIRECT_PORT_ENV) {
+            Ok(value) if !value.trim().is_empty() => {
+                value.parse::<u16>().map(Some).map_err(|error| {
+                    AppError::config(format!(
+                        "failed to parse {OAUTH_REDIRECT_PORT_ENV}: {error}"
+                    ))
+                })
+            }
+            Ok(_) | Err(env::VarError::NotPresent) => Ok(config.auth.oauth_redirect_port),
+            Err(error) => Err(AppError::config(format!(
+                "failed to read {OAUTH_REDIRECT_PORT_ENV}: {error}"
+            ))),
+        }
+    }
+}
+
+fn parse_auth_mode(value: &str) -> AppResult<AuthMode> {
+    match value.trim().to_ascii_lowercase().as_str() {
+        "api_key" | "api-key" => Ok(AuthMode::ApiKey),
+        "oauth" => Ok(AuthMode::OAuth),
+        "auto" => Ok(AuthMode::Auto),
+        other => Err(AppError::config(format!(
+            "invalid auth mode `{other}`. Expected auto, api-key, or oauth"
+        ))),
     }
 }
 
@@ -170,6 +285,7 @@ mod tests {
     #[derive(Debug, Default)]
     struct MemorySecretStore {
         api_key: RefCell<Option<String>>,
+        oauth_session: RefCell<Option<String>>,
     }
 
     impl SecretStore for MemorySecretStore {
@@ -179,6 +295,20 @@ mod tests {
 
         fn set_api_key(&self, api_key: &str) -> AppResult<()> {
             self.api_key.replace(Some(api_key.to_string()));
+            Ok(())
+        }
+
+        fn get_oauth_session(&self) -> AppResult<Option<String>> {
+            Ok(self.oauth_session.borrow().clone())
+        }
+
+        fn set_oauth_session(&self, session_json: &str) -> AppResult<()> {
+            self.oauth_session.replace(Some(session_json.to_string()));
+            Ok(())
+        }
+
+        fn delete_oauth_session(&self) -> AppResult<()> {
+            self.oauth_session.replace(None);
             Ok(())
         }
     }
@@ -195,12 +325,19 @@ mod tests {
         let manager = ConfigManager::with_root(root.clone(), MemorySecretStore::default());
         let config = AppConfig {
             default_creator: Some("user:123".to_string()),
+            auth: AuthConfig {
+                mode: AuthMode::OAuth,
+                oauth_client_id: Some("client".to_string()),
+                oauth_redirect_port: Some(9785),
+            },
         };
 
         manager.save(&config).expect("save should succeed");
         let loaded = manager.load().expect("load should succeed");
 
         assert_eq!(loaded.default_creator.as_deref(), Some("user:123"));
+        assert_eq!(loaded.auth.mode, AuthMode::OAuth);
+        assert_eq!(loaded.auth.oauth_client_id.as_deref(), Some("client"));
 
         fs::remove_dir_all(root).expect("cleanup");
     }

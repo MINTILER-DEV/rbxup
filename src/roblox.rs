@@ -2,6 +2,7 @@ use reqwest::multipart::{Form, Part};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 
+use crate::auth::SharedAuthProvider;
 use crate::creator::CreatorTarget;
 use crate::error::{AppError, AppResult};
 
@@ -19,17 +20,17 @@ pub struct CreateAssetParams {
     pub content_type: &'static str,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct RobloxAssetsClient {
     client: reqwest::Client,
-    api_key: String,
+    auth_provider: SharedAuthProvider,
 }
 
 impl RobloxAssetsClient {
-    pub fn new(api_key: String) -> Self {
+    pub fn new(auth_provider: SharedAuthProvider) -> Self {
         Self {
             client: reqwest::Client::new(),
-            api_key,
+            auth_provider,
         }
     }
 
@@ -63,9 +64,8 @@ impl RobloxAssetsClient {
             .part("fileContent", file_part);
 
         let response = self
-            .client
-            .post(ASSET_CREATE_URL)
-            .header("x-api-key", &self.api_key)
+            .auth_provider
+            .apply(self.client.post(ASSET_CREATE_URL))
             .multipart(form)
             .send()
             .await
@@ -110,9 +110,11 @@ impl RobloxAssetsClient {
     pub async fn get_operation(&self, operation_id: &str) -> AppResult<AssetOperation> {
         let normalized_id = normalize_operation_id(operation_id);
         let response = self
-            .client
-            .get(format!("{ASSET_OPERATION_URL}/{normalized_id}"))
-            .header("x-api-key", &self.api_key)
+            .auth_provider
+            .apply(
+                self.client
+                    .get(format!("{ASSET_OPERATION_URL}/{normalized_id}")),
+            )
             .send()
             .await
             .map_err(|error| {

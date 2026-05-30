@@ -8,6 +8,7 @@ use tokio::task::JoinSet;
 use tokio::time::sleep;
 use walkdir::WalkDir;
 
+use crate::auth::resolve_auth_provider;
 use crate::cli::{UploadAssetType, UploadCommand, UploadOutput};
 use crate::config::{ConfigManager, SecretStore, file_stem};
 use crate::creator::CreatorTarget;
@@ -232,11 +233,9 @@ pub async fn run_upload<S: SecretStore>(
     }
 
     let config = config_manager.load()?;
-    let api_key = config_manager.get_api_key()?.ok_or_else(|| {
-        AppError::auth("no API key configured. Run `rbxup config set api-key <key>`")
-    })?;
+    let auth_provider = resolve_auth_provider(config_manager).await?;
     let creator = resolve_creator(&args, config_manager, &config)?;
-    let client = RobloxAssetsClient::new(api_key);
+    let client = RobloxAssetsClient::new(auth_provider);
 
     match plan {
         UploadPlan::Single(item) => {

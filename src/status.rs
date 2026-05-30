@@ -2,6 +2,7 @@ use std::time::{Duration, Instant};
 
 use tokio::time::sleep;
 
+use crate::auth::resolve_auth_provider;
 use crate::cli::{StatusCommand, StatusOutput};
 use crate::config::{ConfigManager, SecretStore};
 use crate::error::{AppError, AppResult};
@@ -12,10 +13,8 @@ pub async fn run_status<S: SecretStore>(
     args: StatusCommand,
     config_manager: &ConfigManager<S>,
 ) -> AppResult<()> {
-    let api_key = config_manager.get_api_key()?.ok_or_else(|| {
-        AppError::auth("no API key configured. Run `rbxup config set api-key <key>`")
-    })?;
-    let client = RobloxAssetsClient::new(api_key);
+    let auth_provider = resolve_auth_provider(config_manager).await?;
+    let client = RobloxAssetsClient::new(auth_provider);
     let operation = client.get_operation(&args.operation_id).await?;
 
     match args.output {

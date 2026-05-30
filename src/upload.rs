@@ -9,8 +9,11 @@ use crate::creator::CreatorTarget;
 use crate::error::{AppError, AppResult};
 use crate::output::print_json;
 use crate::roblox::{CreateAssetParams, RobloxAssetsClient};
+use crate::status::wait_for_operation;
 
 const MAX_UPLOAD_SIZE_BYTES: u64 = 20 * 1024 * 1024;
+const DEFAULT_POLL_INTERVAL_SECONDS: u64 = 2;
+const DEFAULT_YIELD_TIMEOUT_SECONDS: u64 = 300;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum AssetType {
@@ -109,6 +112,8 @@ struct UploadJsonOutput {
     file: String,
     #[serde(rename = "operationId")]
     operation_id: String,
+    #[serde(rename = "assetId", skip_serializing_if = "Option::is_none")]
+    asset_id: Option<String>,
     #[serde(rename = "assetType")]
     asset_type: String,
     #[serde(rename = "displayName")]
@@ -119,6 +124,18 @@ pub async fn run_upload<S: SecretStore>(
     args: UploadCommand,
     config_manager: &ConfigManager<S>,
 ) -> AppResult<()> {
+    if matches!(args.output, Some(UploadOutput::Id)) && !args.yield_until_done {
+        return Err(AppError::invalid_args(
+            "--output id requires --yield for uploads",
+        ));
+    }
+
+    if !args.yield_until_done && (args.timeout.is_some() || args.poll_interval.is_some()) {
+        return Err(AppError::invalid_args(
+            "--timeout and --poll-interval require --yield",
+        ));
+    }
+
     if !args.path.exists() {
         return Err(AppError::invalid_args(format!(
             "file does not exist: {}",
@@ -179,9 +196,14 @@ pub async fn run_upload<S: SecretStore>(
     let file_bytes = fs::read(&args.path).map_err(|error| {
         AppError::upload(format!("failed to read {}: {error}", args.path.display()))
     })?;
+    let output_mode = args.output.unwrap_or(if args.yield_until_done {
+        UploadOutput::Id
+    } else {
+        UploadOutput::Job
+    });
 
     let client = RobloxAssetsClient::new(api_key);
-    let response = client
+    let create_response = client
         .create_asset(CreateAssetParams {
             asset_type: asset_type.api_name().to_string(),
             display_name: display_name.clone(),
@@ -192,26 +214,71 @@ pub async fn run_upload<S: SecretStore>(
             content_type,
         })
         .await?;
-    let output = UploadJsonOutput {
+    let mut output = UploadJsonOutput {
         file: args
             .path
             .file_name()
             .and_then(|value| value.to_str())
             .unwrap_or_else(|| args.path.as_os_str().to_str().unwrap_or_default())
             .to_string(),
-        operation_id: response.path,
+        operation_id: create_response.path.clone(),
+        asset_id: None,
         asset_type: asset_type.api_name().to_string(),
         display_name,
     };
 
-    match args.output {
+    if args.yield_until_done {
+        let poll_interval = args.poll_interval.unwrap_or(std::time::Duration::from_secs(
+            DEFAULT_POLL_INTERVAL_SECONDS,
+        ));
+        let timeout = args.timeout.unwrap_or(std::time::Duration::from_secs(
+            DEFAULT_YIELD_TIMEOUT_SECONDS,
+        ));
+
+        if poll_interval.is_zero() {
+            return Err(AppError::invalid_args(
+                "--poll-interval must be greater than 0s",
+            ));
+        }
+
+        if timeout.is_zero() {
+            return Err(AppError::invalid_args("--timeout must be greater than 0s"));
+        }
+
+        let operation =
+            wait_for_operation(&client, &create_response.path, poll_interval, timeout).await?;
+        let asset_id = operation.asset_id().ok_or_else(|| {
+            if let Some(message) = operation.error_message() {
+                AppError::upload(format!("operation {} failed: {message}", operation.path))
+            } else {
+                AppError::upload(format!(
+                    "operation {} completed without an asset ID",
+                    operation.path
+                ))
+            }
+        })?;
+
+        output.asset_id = Some(asset_id.to_string());
+    }
+
+    match output_mode {
         UploadOutput::Job => {
             println!("{}", output.operation_id);
+            Ok(())
+        }
+        UploadOutput::Id => {
+            let asset_id = output.asset_id.as_deref().ok_or_else(|| {
+                AppError::invalid_args("--output id requires --yield for uploads")
+            })?;
+            println!("{asset_id}");
             Ok(())
         }
         UploadOutput::Json => print_json(&output),
         UploadOutput::Pretty => {
             println!("Operation ID: {}", output.operation_id);
+            if let Some(asset_id) = &output.asset_id {
+                println!("Asset ID: {asset_id}");
+            }
             println!("File: {}", output.file);
             println!("Asset Type: {}", output.asset_type);
             println!("Display Name: {}", output.display_name);

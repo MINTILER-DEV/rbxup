@@ -52,6 +52,13 @@ impl AppError {
         }
     }
 
+    pub fn timeout(message: impl Into<String>) -> Self {
+        Self {
+            code: ExitCode::Timeout,
+            message: message.into(),
+        }
+    }
+
     pub fn exit_code(&self) -> i32 {
         self.code as i32
     }
@@ -65,5 +72,6 @@ pub enum ExitCode {
     Config = 3,
     UploadFailed = 4,
     RateLimited = 6,
+    Timeout = 7,
     InvalidArguments = 8,
 }

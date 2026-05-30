@@ -1,4 +1,5 @@
 use std::path::PathBuf;
+use std::time::Duration;
 
 use clap::{Parser, Subcommand, ValueEnum};
 
@@ -49,9 +50,18 @@ pub struct UploadCommand {
     /// Upload owner, for example user:123 or group:456
     #[arg(long)]
     pub creator: Option<String>,
+    /// Wait for the operation to finish and return the final asset
+    #[arg(long = "yield")]
+    pub yield_until_done: bool,
+    /// Maximum amount of time to wait when --yield is enabled
+    #[arg(long, value_parser = parse_duration)]
+    pub timeout: Option<Duration>,
+    /// Delay between status polls when --yield is enabled
+    #[arg(long, value_parser = parse_duration)]
+    pub poll_interval: Option<Duration>,
     /// Stdout output mode
-    #[arg(long, value_enum, default_value_t = UploadOutput::Job)]
-    pub output: UploadOutput,
+    #[arg(long, value_enum)]
+    pub output: Option<UploadOutput>,
 }
 
 #[derive(Debug, clap::Args)]
@@ -106,6 +116,7 @@ pub enum UploadAssetType {
 #[derive(Debug, Clone, Copy, ValueEnum)]
 pub enum UploadOutput {
     Job,
+    Id,
     Json,
     Pretty,
 }
@@ -115,6 +126,21 @@ pub enum StatusOutput {
     Json,
     Id,
     Pretty,
+}
+
+fn parse_duration(value: &str) -> Result<Duration, String> {
+    humantime::parse_duration(value).map_err(|error| format!("invalid duration `{value}`: {error}"))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::parse_duration;
+
+    #[test]
+    fn parses_human_duration() {
+        let duration = parse_duration("5m").expect("duration should parse");
+        assert_eq!(duration.as_secs(), 300);
+    }
 }
 
 #[derive(Debug, Subcommand)]

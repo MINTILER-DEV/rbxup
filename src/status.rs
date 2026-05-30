@@ -1,3 +1,7 @@
+use std::time::{Duration, Instant};
+
+use tokio::time::sleep;
+
 use crate::cli::{StatusCommand, StatusOutput};
 use crate::config::{ConfigManager, SecretStore};
 use crate::error::{AppError, AppResult};
@@ -68,4 +72,30 @@ pub fn print_operation_asset_id(operation: &AssetOperation) -> AppResult<()> {
 
     println!("{asset_id}");
     Ok(())
+}
+
+pub async fn wait_for_operation(
+    client: &RobloxAssetsClient,
+    operation_id: &str,
+    poll_interval: Duration,
+    timeout: Duration,
+) -> AppResult<AssetOperation> {
+    let started_at = Instant::now();
+
+    loop {
+        let operation = client.get_operation(operation_id).await?;
+        if operation.done {
+            return Ok(operation);
+        }
+
+        if started_at.elapsed() >= timeout {
+            return Err(AppError::timeout(format!(
+                "upload still processing after {} for operation {}",
+                humantime::format_duration(timeout),
+                operation.path
+            )));
+        }
+
+        sleep(poll_interval).await;
+    }
 }

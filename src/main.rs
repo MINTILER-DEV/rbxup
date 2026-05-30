@@ -1,9 +1,12 @@
 mod app;
 mod cli;
 mod config;
+mod creator;
 mod doctor;
 mod error;
 mod output;
+mod roblox;
+mod upload;
 
 use clap::Parser;
 

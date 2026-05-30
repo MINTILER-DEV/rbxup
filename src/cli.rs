@@ -40,6 +40,21 @@ pub enum Commands {
 pub struct UploadCommand {
     /// File path to upload
     pub path: PathBuf,
+    /// Explicit Roblox asset type
+    #[arg(long = "type", value_enum)]
+    pub asset_type: Option<UploadAssetType>,
+    /// Override the asset display name
+    #[arg(long)]
+    pub display_name: Option<String>,
+    /// Optional asset description
+    #[arg(long)]
+    pub description: Option<String>,
+    /// Upload owner, for example user:123 or group:456
+    #[arg(long)]
+    pub creator: Option<String>,
+    /// Stdout output mode
+    #[arg(long, value_enum, default_value_t = UploadOutput::Job)]
+    pub output: UploadOutput,
 }
 
 #[derive(Debug, Subcommand)]
@@ -70,6 +85,21 @@ pub struct DoctorArgs {
 
 #[derive(Debug, Clone, Copy, ValueEnum)]
 pub enum DoctorOutput {
+    Json,
+    Pretty,
+}
+
+#[derive(Debug, Clone, Copy, ValueEnum)]
+pub enum UploadAssetType {
+    Image,
+    Audio,
+    Model,
+    Animation,
+}
+
+#[derive(Debug, Clone, Copy, ValueEnum)]
+pub enum UploadOutput {
+    Job,
     Json,
     Pretty,
 }

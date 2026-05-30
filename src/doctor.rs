@@ -36,8 +36,8 @@ impl DoctorReport {
             config_path: config_manager.config_path().display().to_string(),
             config_exists: config_manager.config_exists(),
             api_key_configured,
-            default_creator,
-            upload_ready: api_key_configured && config.default_creator.is_some(),
+            default_creator: default_creator.clone(),
+            upload_ready: api_key_configured && default_creator.is_some(),
             warnings,
         })
     }

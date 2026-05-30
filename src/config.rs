@@ -10,6 +10,7 @@ use crate::error::{AppError, AppResult};
 const APP_NAME: &str = "rbxup";
 const API_KEY_ACCOUNT: &str = "api-key";
 const OAUTH_SESSION_ACCOUNT: &str = "oauth-session";
+const API_KEY_FALLBACK_FILE: &str = "api-key";
 const API_KEY_ENV: &str = "RBXUP_API_KEY";
 const CREATOR_ENV: &str = "RBXUP_CREATOR";
 const OAUTH_CLIENT_ID_ENV: &str = "RBXUP_OAUTH_CLIENT_ID";
@@ -138,6 +139,10 @@ impl<S: SecretStore> ConfigManager<S> {
         self.root_dir.join("config.toml")
     }
 
+    fn api_key_fallback_path(&self) -> PathBuf {
+        self.root_dir.join(API_KEY_FALLBACK_FILE)
+    }
+
     pub fn config_exists(&self) -> bool {
         self.config_path().exists()
     }
@@ -177,7 +182,13 @@ impl<S: SecretStore> ConfigManager<S> {
     pub fn get_api_key(&self) -> AppResult<Option<String>> {
         match env::var(API_KEY_ENV) {
             Ok(value) if !value.trim().is_empty() => Ok(Some(value)),
-            Ok(_) | Err(env::VarError::NotPresent) => self.secret_store.get_api_key(),
+            Ok(_) | Err(env::VarError::NotPresent) => {
+                if let Some(api_key) = self.secret_store.get_api_key()? {
+                    return Ok(Some(api_key));
+                }
+
+                self.read_api_key_fallback()
+            }
             Err(error) => Err(AppError::config(format!(
                 "failed to read {API_KEY_ENV}: {error}"
             ))),
@@ -189,7 +200,16 @@ impl<S: SecretStore> ConfigManager<S> {
             return Err(AppError::invalid_args("API key cannot be empty"));
         }
 
-        self.secret_store.set_api_key(api_key)
+        match self.secret_store.set_api_key(api_key) {
+            Ok(()) => match self.secret_store.get_api_key()? {
+                Some(stored) if stored == api_key => {
+                    self.delete_api_key_fallback()?;
+                    Ok(())
+                }
+                _ => self.write_api_key_fallback(api_key),
+            },
+            Err(_) => self.write_api_key_fallback(api_key),
+        }
     }
 
     pub fn get_oauth_session(&self) -> AppResult<Option<String>> {
@@ -202,6 +222,50 @@ impl<S: SecretStore> ConfigManager<S> {
 
     pub fn clear_oauth_session(&self) -> AppResult<()> {
         self.secret_store.delete_oauth_session()
+    }
+
+    fn read_api_key_fallback(&self) -> AppResult<Option<String>> {
+        let path = self.api_key_fallback_path();
+        if !path.exists() {
+            return Ok(None);
+        }
+
+        let value = fs::read_to_string(&path).map_err(|error| {
+            AppError::config(format!("failed to read {}: {error}", path.display()))
+        })?;
+        let value = value.trim().to_string();
+
+        if value.is_empty() {
+            Ok(None)
+        } else {
+            Ok(Some(value))
+        }
+    }
+
+    fn write_api_key_fallback(&self, api_key: &str) -> AppResult<()> {
+        fs::create_dir_all(&self.root_dir).map_err(|error| {
+            AppError::config(format!(
+                "failed to create config directory {}: {error}",
+                self.root_dir.display()
+            ))
+        })?;
+
+        let path = self.api_key_fallback_path();
+        fs::write(&path, api_key).map_err(|error| {
+            AppError::config(format!("failed to write {}: {error}", path.display()))
+        })
+    }
+
+    fn delete_api_key_fallback(&self) -> AppResult<()> {
+        let path = self.api_key_fallback_path();
+        match fs::remove_file(&path) {
+            Ok(()) => Ok(()),
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(()),
+            Err(error) => Err(AppError::config(format!(
+                "failed to remove {}: {error}",
+                path.display()
+            ))),
+        }
     }
 
     pub fn resolve_creator(&self, config: &AppConfig) -> AppResult<Option<String>> {
@@ -346,5 +410,52 @@ mod tests {
     fn derives_file_stem() {
         let stem = file_stem(Path::new("assets/icon.png")).expect("stem");
         assert_eq!(stem, "icon");
+    }
+
+    #[derive(Debug, Default)]
+    struct BrokenApiKeyStore;
+
+    impl SecretStore for BrokenApiKeyStore {
+        fn get_api_key(&self) -> AppResult<Option<String>> {
+            Ok(None)
+        }
+
+        fn set_api_key(&self, _api_key: &str) -> AppResult<()> {
+            Ok(())
+        }
+
+        fn get_oauth_session(&self) -> AppResult<Option<String>> {
+            Ok(None)
+        }
+
+        fn set_oauth_session(&self, _session_json: &str) -> AppResult<()> {
+            Ok(())
+        }
+
+        fn delete_oauth_session(&self) -> AppResult<()> {
+            Ok(())
+        }
+    }
+
+    #[test]
+    fn falls_back_to_local_file_when_secret_store_does_not_return_api_key() {
+        let root = std::env::temp_dir().join(format!(
+            "rbxup-test-fallback-{}",
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .expect("time")
+                .as_nanos()
+        ));
+        let manager = ConfigManager::with_root(root.clone(), BrokenApiKeyStore);
+
+        manager
+            .set_api_key("test-key")
+            .expect("fallback write should succeed");
+
+        let stored = manager.get_api_key().expect("fallback read should succeed");
+        assert_eq!(stored.as_deref(), Some("test-key"));
+        assert!(manager.api_key_fallback_path().exists());
+
+        fs::remove_dir_all(root).expect("cleanup");
     }
 }

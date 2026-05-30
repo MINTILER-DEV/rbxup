@@ -14,6 +14,7 @@ use crate::config::{ConfigManager, SecretStore, file_stem};
 use crate::creator::CreatorTarget;
 use crate::error::{AppError, AppResult};
 use crate::output::{print_json, print_json_compact};
+use crate::project::{ResolvedUploadSettings, load_project_context};
 use crate::roblox::{CreateAssetParams, RobloxAssetsClient};
 use crate::status::wait_for_operation;
 
@@ -136,6 +137,28 @@ struct PreparedUpload {
     display_name: String,
 }
 
+#[derive(Debug, Clone)]
+struct ResolvedUploadCommand {
+    path: PathBuf,
+    asset_type: Option<UploadAssetType>,
+    description: Option<String>,
+    creator: Option<String>,
+    include: Vec<String>,
+    exclude: Vec<String>,
+    ext: Vec<String>,
+    recursive: bool,
+    max_depth: Option<usize>,
+    limit: Option<usize>,
+    dry_run: bool,
+    concurrency: Option<usize>,
+    yield_until_done: bool,
+    timeout: Option<std::time::Duration>,
+    poll_interval: Option<std::time::Duration>,
+    output: Option<UploadOutput>,
+    display_name: Option<String>,
+    name_template: Option<String>,
+}
+
 #[derive(Debug, Clone, Serialize)]
 struct UploadResult {
     file: String,
@@ -207,6 +230,8 @@ pub async fn run_upload<S: SecretStore>(
     args: UploadCommand,
     config_manager: &ConfigManager<S>,
 ) -> AppResult<()> {
+    let args = resolve_upload_command(args)?;
+
     if matches!(args.output, Some(UploadOutput::Id)) && !args.yield_until_done {
         return Err(AppError::invalid_args(
             "--output id requires --yield for uploads",
@@ -239,7 +264,7 @@ pub async fn run_upload<S: SecretStore>(
 
     match plan {
         UploadPlan::Single(item) => {
-            let prepared = prepare_upload(item, args.asset_type)?;
+            let prepared = prepare_upload(item, &args)?;
             let output_mode = args.output.unwrap_or(if args.yield_until_done {
                 UploadOutput::Id
             } else {
@@ -259,6 +284,54 @@ pub async fn run_upload<S: SecretStore>(
     }
 }
 
+fn resolve_upload_command(args: UploadCommand) -> AppResult<ResolvedUploadCommand> {
+    let project_settings = load_project_context(args.profile.as_deref())?
+        .as_ref()
+        .map(|context| context.resolve_upload_settings(&args));
+
+    let settings = project_settings.unwrap_or(ResolvedUploadSettings {
+        path: None,
+        creator: None,
+        asset_type: None,
+        recursive: false,
+        include: Vec::new(),
+        exclude: Vec::new(),
+        ext: Vec::new(),
+        max_depth: None,
+        limit: None,
+        output: None,
+        concurrency: None,
+        name_template: None,
+    });
+
+    let path = settings.path.ok_or_else(|| {
+        AppError::invalid_args(
+            "no upload path was provided. Pass a file or folder, or set `path` in rbxup.toml",
+        )
+    })?;
+
+    Ok(ResolvedUploadCommand {
+        path,
+        asset_type: args.asset_type.or(settings.asset_type),
+        description: args.description,
+        creator: args.creator.or(settings.creator),
+        include: settings.include,
+        exclude: settings.exclude,
+        ext: settings.ext,
+        recursive: settings.recursive,
+        max_depth: args.max_depth.or(settings.max_depth),
+        limit: args.limit.or(settings.limit),
+        dry_run: args.dry_run,
+        concurrency: args.concurrency.or(settings.concurrency),
+        yield_until_done: args.yield_until_done,
+        timeout: args.timeout,
+        poll_interval: args.poll_interval,
+        output: args.output.or(settings.output),
+        display_name: args.display_name,
+        name_template: args.name_template.or(settings.name_template),
+    })
+}
+
 fn validate_bulk_output(output: UploadOutput) -> AppResult<()> {
     match output {
         UploadOutput::Json | UploadOutput::Jsonl | UploadOutput::Map | UploadOutput::Pretty => {
@@ -270,7 +343,7 @@ fn validate_bulk_output(output: UploadOutput) -> AppResult<()> {
     }
 }
 
-fn build_upload_plan(args: &UploadCommand) -> AppResult<UploadPlan> {
+fn build_upload_plan(args: &ResolvedUploadCommand) -> AppResult<UploadPlan> {
     if args.path.is_file() {
         validate_single_file_flags(args)?;
 
@@ -359,7 +432,7 @@ fn build_upload_plan(args: &UploadCommand) -> AppResult<UploadPlan> {
     Ok(UploadPlan::Bulk(items))
 }
 
-fn validate_single_file_flags(args: &UploadCommand) -> AppResult<()> {
+fn validate_single_file_flags(args: &ResolvedUploadCommand) -> AppResult<()> {
     if !args.include.is_empty()
         || !args.exclude.is_empty()
         || !args.ext.is_empty()
@@ -376,10 +449,7 @@ fn validate_single_file_flags(args: &UploadCommand) -> AppResult<()> {
     Ok(())
 }
 
-fn prepare_upload(
-    item: UploadItem,
-    asset_type_override: Option<UploadAssetType>,
-) -> AppResult<PreparedUpload> {
+fn prepare_upload(item: UploadItem, args: &ResolvedUploadCommand) -> AppResult<PreparedUpload> {
     let metadata = fs::metadata(&item.absolute_path).map_err(|error| {
         AppError::invalid_args(format!(
             "failed to inspect {}: {error}",
@@ -395,11 +465,12 @@ fn prepare_upload(
         )));
     }
 
-    let asset_type = AssetType::from_cli(asset_type_override, &item.absolute_path)?;
+    let asset_type = AssetType::from_cli(args.asset_type, &item.absolute_path)?;
+    let display_name = resolve_display_name(&item, args)?;
 
     Ok(PreparedUpload {
         content_type: asset_type.content_type(&item.absolute_path)?,
-        display_name: file_stem(&item.absolute_path)?,
+        display_name,
         asset_type,
         file_path: item.absolute_path,
         output_path: item.output_path,
@@ -411,7 +482,7 @@ async fn execute_upload(
     prepared: PreparedUpload,
     creator: CreatorTarget,
     yield_until_done: bool,
-    args: &UploadCommand,
+    args: &ResolvedUploadCommand,
 ) -> AppResult<UploadResult> {
     let file_name = prepared
         .file_path
@@ -496,7 +567,7 @@ async fn execute_bulk_uploads(
     client: RobloxAssetsClient,
     items: Vec<UploadItem>,
     creator: CreatorTarget,
-    args: UploadCommand,
+    args: ResolvedUploadCommand,
 ) -> AppResult<Vec<UploadResult>> {
     let concurrency = args.concurrency.unwrap_or(DEFAULT_BULK_CONCURRENCY);
     if concurrency == 0 {
@@ -551,13 +622,13 @@ fn spawn_bulk_task(
     join_set: &mut JoinSet<(usize, UploadResult)>,
     client: RobloxAssetsClient,
     creator: CreatorTarget,
-    args: UploadCommand,
+    args: ResolvedUploadCommand,
     index: usize,
     item: UploadItem,
 ) {
     join_set.spawn(async move {
         let output_path = item.output_path.clone();
-        let result = match prepare_upload(item, args.asset_type) {
+        let result = match prepare_upload(item, &args) {
             Ok(prepared) => execute_upload_with_retries(
                 &client,
                 prepared,
@@ -579,7 +650,7 @@ async fn execute_upload_with_retries(
     prepared: PreparedUpload,
     creator: CreatorTarget,
     yield_until_done: bool,
-    args: &UploadCommand,
+    args: &ResolvedUploadCommand,
 ) -> AppResult<UploadResult> {
     let mut retry = 0u32;
 
@@ -781,7 +852,7 @@ fn print_dry_run(plan: &UploadPlan) -> AppResult<()> {
 }
 
 fn resolve_creator<S: SecretStore>(
-    args: &UploadCommand,
+    args: &ResolvedUploadCommand,
     config_manager: &ConfigManager<S>,
     config: &crate::config::AppConfig,
 ) -> AppResult<CreatorTarget> {
@@ -795,6 +866,45 @@ fn resolve_creator<S: SecretStore>(
     };
 
     CreatorTarget::parse(&raw_creator)
+}
+
+fn resolve_display_name(item: &UploadItem, args: &ResolvedUploadCommand) -> AppResult<String> {
+    if let Some(display_name) = &args.display_name {
+        return Ok(display_name.clone());
+    }
+
+    if let Some(template) = &args.name_template {
+        return render_name_template(template, &item.output_path);
+    }
+
+    file_stem(&item.absolute_path)
+}
+
+fn render_name_template(template: &str, output_path: &str) -> AppResult<String> {
+    let output_path = Path::new(output_path);
+    let stem = output_path
+        .file_stem()
+        .and_then(|value| value.to_str())
+        .ok_or_else(|| {
+            AppError::invalid_args(format!(
+                "could not derive a display name from {}",
+                output_path.display()
+            ))
+        })?;
+    let parent = output_path
+        .parent()
+        .and_then(|value| value.file_name())
+        .and_then(|value| value.to_str())
+        .unwrap_or("");
+    let rendered = template.replace("{stem}", stem).replace("{parent}", parent);
+
+    if rendered.trim().is_empty() {
+        return Err(AppError::invalid_args(format!(
+            "name template `{template}` rendered an empty display name"
+        )));
+    }
+
+    Ok(rendered)
 }
 
 fn build_glob_set(patterns: &[String]) -> AppResult<Option<GlobSet>> {
@@ -831,7 +941,10 @@ fn extension(path: &Path) -> AppResult<String> {
 mod tests {
     use std::path::Path;
 
-    use super::{AssetType, BulkMatcher, MatcherConfig, UploadResult, summarize_bulk_results};
+    use super::{
+        AssetType, BulkMatcher, MatcherConfig, ResolvedUploadCommand, UploadItem, UploadResult,
+        render_name_template, resolve_display_name, summarize_bulk_results,
+    };
 
     #[test]
     fn infers_image_asset_type() {
@@ -887,5 +1000,42 @@ mod tests {
 
         let error = summarize_bulk_results(&results).expect_err("summary should fail");
         assert_eq!(error.exit_code(), 5);
+    }
+
+    #[test]
+    fn name_template_uses_relative_parent_folder() {
+        let rendered = render_name_template("{parent}_{stem}", "ui/button.png").expect("render");
+        assert_eq!(rendered, "ui_button");
+    }
+
+    #[test]
+    fn explicit_display_name_wins_over_template() {
+        let item = UploadItem {
+            absolute_path: Path::new("assets/icon.png").to_path_buf(),
+            output_path: "icon.png".to_string(),
+        };
+        let args = ResolvedUploadCommand {
+            path: Path::new("assets/icon.png").to_path_buf(),
+            asset_type: Some(crate::cli::UploadAssetType::Image),
+            description: None,
+            creator: None,
+            include: Vec::new(),
+            exclude: Vec::new(),
+            ext: Vec::new(),
+            recursive: false,
+            max_depth: None,
+            limit: None,
+            dry_run: false,
+            concurrency: None,
+            yield_until_done: false,
+            timeout: None,
+            poll_interval: None,
+            output: None,
+            display_name: Some("manual-name".to_string()),
+            name_template: Some("{stem}".to_string()),
+        };
+
+        let display_name = resolve_display_name(&item, &args).expect("display name");
+        assert_eq!(display_name, "manual-name");
     }
 }

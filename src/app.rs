@@ -1,13 +1,14 @@
 use crate::auth::{login as auth_login, logout as auth_logout, whoami as auth_whoami};
 use crate::cli::{
     AuthCommand, AuthOutput, Cli, Commands, ConfigCommand, ConfigSetCommand, DoctorArgs,
-    DoctorOutput,
+    DoctorOutput, InitCommand,
 };
 use crate::config::{ConfigManager, SecretStore, SystemSecretStore};
 use crate::creator::CreatorTarget;
 use crate::doctor::DoctorReport;
 use crate::error::AppResult;
 use crate::output::print_json;
+use crate::project::init_project_config;
 use crate::status::run_status;
 use crate::upload::run_upload;
 
@@ -23,12 +24,22 @@ pub async fn run(cli: Cli) -> AppResult<()> {
     let config_manager = ConfigManager::new(SystemSecretStore::new())?;
 
     match cli.command {
+        Commands::Init(args) => run_init(args),
         Commands::Config { command } => run_config(command, &config_manager),
         Commands::Doctor(args) => run_doctor(args, &config_manager),
         Commands::Auth { command } => run_auth(command, &config_manager).await,
         Commands::Status(args) => run_status(args, &config_manager).await,
         Commands::Upload(args) => run_upload(args, &config_manager).await,
     }
+}
+
+fn run_init(args: InitCommand) -> AppResult<()> {
+    let path = init_project_config(args.force)?;
+    let payload = serde_json::json!({
+        "created": true,
+        "path": path.display().to_string(),
+    });
+    print_json(&payload)
 }
 
 fn run_config<S: SecretStore>(

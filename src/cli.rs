@@ -2,6 +2,7 @@ use std::path::PathBuf;
 use std::time::Duration;
 
 use clap::{Parser, Subcommand, ValueEnum};
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Parser)]
 #[command(
@@ -18,6 +19,8 @@ pub struct Cli {
 pub enum Commands {
     /// Upload a single asset file
     Upload(UploadCommand),
+    /// Initialize rbxup.toml in the current directory
+    Init(InitCommand),
     /// Inspect or change local configuration
     Config {
         #[command(subcommand)]
@@ -37,7 +40,7 @@ pub enum Commands {
 #[derive(Debug, Clone, clap::Args)]
 pub struct UploadCommand {
     /// File path to upload
-    pub path: PathBuf,
+    pub path: Option<PathBuf>,
     /// Explicit Roblox asset type
     #[arg(long = "type", value_enum)]
     pub asset_type: Option<UploadAssetType>,
@@ -50,6 +53,12 @@ pub struct UploadCommand {
     /// Upload owner, for example user:123 or group:456
     #[arg(long)]
     pub creator: Option<String>,
+    /// Project config profile from rbxup.toml
+    #[arg(long)]
+    pub profile: Option<String>,
+    /// Display name template like {stem} or {parent}_{stem}
+    #[arg(long)]
+    pub name_template: Option<String>,
     /// Only include files that match this glob. Can be repeated.
     #[arg(long)]
     pub include: Vec<String>,
@@ -86,6 +95,13 @@ pub struct UploadCommand {
     /// Stdout output mode
     #[arg(long, value_enum)]
     pub output: Option<UploadOutput>,
+}
+
+#[derive(Debug, Clone, clap::Args)]
+pub struct InitCommand {
+    /// Overwrite an existing rbxup.toml
+    #[arg(long)]
+    pub force: bool,
 }
 
 #[derive(Debug, clap::Args)]
@@ -129,7 +145,8 @@ pub enum DoctorOutput {
     Pretty,
 }
 
-#[derive(Debug, Clone, Copy, ValueEnum)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, ValueEnum)]
+#[serde(rename_all = "snake_case")]
 pub enum UploadAssetType {
     Image,
     Audio,
@@ -137,7 +154,8 @@ pub enum UploadAssetType {
     Animation,
 }
 
-#[derive(Debug, Clone, Copy, ValueEnum)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, ValueEnum)]
+#[serde(rename_all = "snake_case")]
 pub enum UploadOutput {
     Job,
     Id,

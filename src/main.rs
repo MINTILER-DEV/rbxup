@@ -6,6 +6,7 @@ mod creator;
 mod doctor;
 mod error;
 mod output;
+mod project;
 mod roblox;
 mod status;
 mod upload;

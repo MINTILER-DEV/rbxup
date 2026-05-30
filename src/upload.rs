@@ -1,13 +1,16 @@
+use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
+use globset::{Glob, GlobSet, GlobSetBuilder};
 use serde::Serialize;
+use walkdir::WalkDir;
 
 use crate::cli::{UploadAssetType, UploadCommand, UploadOutput};
 use crate::config::{ConfigManager, SecretStore, file_stem};
 use crate::creator::CreatorTarget;
 use crate::error::{AppError, AppResult};
-use crate::output::print_json;
+use crate::output::{print_json, print_json_compact};
 use crate::roblox::{CreateAssetParams, RobloxAssetsClient};
 use crate::status::wait_for_operation;
 
@@ -107,17 +110,92 @@ impl AssetType {
     }
 }
 
-#[derive(Debug, Serialize)]
-struct UploadJsonOutput {
+#[derive(Debug, Clone)]
+struct UploadItem {
+    absolute_path: PathBuf,
+    output_path: String,
+}
+
+#[derive(Debug)]
+enum UploadPlan {
+    Single(UploadItem),
+    Bulk(Vec<UploadItem>),
+}
+
+#[derive(Debug, Clone)]
+struct PreparedUpload {
+    file_path: PathBuf,
+    output_path: String,
+    asset_type: AssetType,
+    content_type: &'static str,
+    display_name: String,
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct UploadResult {
     file: String,
-    #[serde(rename = "operationId")]
-    operation_id: String,
+    #[serde(rename = "operationId", skip_serializing_if = "Option::is_none")]
+    operation_id: Option<String>,
     #[serde(rename = "assetId", skip_serializing_if = "Option::is_none")]
     asset_id: Option<String>,
-    #[serde(rename = "assetType")]
-    asset_type: String,
-    #[serde(rename = "displayName")]
-    display_name: String,
+    #[serde(rename = "assetType", skip_serializing_if = "Option::is_none")]
+    asset_type: Option<String>,
+    #[serde(rename = "displayName", skip_serializing_if = "Option::is_none")]
+    display_name: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    error: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    message: Option<String>,
+}
+
+#[derive(Debug, Default)]
+struct MatcherConfig {
+    include: Vec<String>,
+    exclude: Vec<String>,
+    extensions: BTreeSet<String>,
+}
+
+#[derive(Debug)]
+struct BulkMatcher {
+    include: Option<GlobSet>,
+    exclude: Option<GlobSet>,
+    extensions: BTreeSet<String>,
+}
+
+impl BulkMatcher {
+    fn build(config: MatcherConfig) -> AppResult<Self> {
+        Ok(Self {
+            include: build_glob_set(&config.include)?,
+            exclude: build_glob_set(&config.exclude)?,
+            extensions: config.extensions,
+        })
+    }
+
+    fn matches(&self, relative_path: &Path) -> bool {
+        let relative = relative_path.to_string_lossy().replace('\\', "/");
+
+        if let Some(include) = &self.include {
+            if !include.is_match(&relative) {
+                return false;
+            }
+        }
+
+        if let Some(exclude) = &self.exclude {
+            if exclude.is_match(&relative) {
+                return false;
+            }
+        }
+
+        if self.extensions.is_empty() {
+            return true;
+        }
+
+        relative_path
+            .extension()
+            .and_then(|value| value.to_str())
+            .map(|value| value.to_ascii_lowercase())
+            .is_some_and(|value| self.extensions.contains(&value))
+    }
 }
 
 pub async fn run_upload<S: SecretStore>(
@@ -138,96 +216,256 @@ pub async fn run_upload<S: SecretStore>(
 
     if !args.path.exists() {
         return Err(AppError::invalid_args(format!(
-            "file does not exist: {}",
+            "file or folder does not exist: {}",
             args.path.display()
         )));
     }
 
-    if !args.path.is_file() {
-        return Err(AppError::invalid_args(format!(
-            "phase 2 only supports single-file uploads. Received: {}",
-            args.path.display()
-        )));
+    let plan = build_upload_plan(&args)?;
+
+    if args.dry_run {
+        return print_dry_run(&plan);
     }
-
-    let metadata = fs::metadata(&args.path).map_err(|error| {
-        AppError::invalid_args(format!(
-            "failed to inspect {}: {error}",
-            args.path.display()
-        ))
-    })?;
-
-    if metadata.len() > MAX_UPLOAD_SIZE_BYTES {
-        return Err(AppError::invalid_args(format!(
-            "{} is {} bytes, which exceeds the 20 MB Roblox upload limit",
-            args.path.display(),
-            metadata.len()
-        )));
-    }
-
-    let asset_type = AssetType::from_cli(args.asset_type, &args.path)?;
-    let display_name = args
-        .display_name
-        .clone()
-        .filter(|value| !value.trim().is_empty())
-        .unwrap_or(file_stem(&args.path)?);
-    let description = args
-        .description
-        .clone()
-        .filter(|value| !value.trim().is_empty());
-    let content_type = asset_type.content_type(&args.path)?;
 
     let config = config_manager.load()?;
     let api_key = config_manager.get_api_key()?.ok_or_else(|| {
         AppError::auth("no API key configured. Run `rbxup config set api-key <key>`")
     })?;
     let creator = resolve_creator(&args, config_manager, &config)?;
-    let file_name = args
-        .path
+    let client = RobloxAssetsClient::new(api_key);
+
+    match plan {
+        UploadPlan::Single(item) => {
+            let prepared = prepare_upload(item, args.asset_type)?;
+            let output_mode = args.output.unwrap_or(if args.yield_until_done {
+                UploadOutput::Id
+            } else {
+                UploadOutput::Job
+            });
+            let result =
+                execute_upload(&client, prepared, creator, args.yield_until_done, &args).await?;
+            print_single_result(result, output_mode)
+        }
+        UploadPlan::Bulk(items) => {
+            let output_mode = args.output.unwrap_or(UploadOutput::Jsonl);
+            validate_bulk_output(output_mode)?;
+            let mut results = Vec::with_capacity(items.len());
+
+            for item in items {
+                let prepared = prepare_upload(item, args.asset_type)?;
+                let result = execute_upload(
+                    &client,
+                    prepared,
+                    creator.clone(),
+                    args.yield_until_done,
+                    &args,
+                )
+                .await?;
+                results.push(result);
+            }
+
+            print_bulk_results(&results, output_mode, args.yield_until_done)
+        }
+    }
+}
+
+fn validate_bulk_output(output: UploadOutput) -> AppResult<()> {
+    match output {
+        UploadOutput::Json | UploadOutput::Jsonl | UploadOutput::Map | UploadOutput::Pretty => {
+            Ok(())
+        }
+        UploadOutput::Job | UploadOutput::Id => Err(AppError::invalid_args(
+            "folder uploads support --output json, jsonl, map, or pretty",
+        )),
+    }
+}
+
+fn build_upload_plan(args: &UploadCommand) -> AppResult<UploadPlan> {
+    if args.path.is_file() {
+        validate_single_file_flags(args)?;
+
+        return Ok(UploadPlan::Single(UploadItem {
+            absolute_path: args.path.clone(),
+            output_path: args
+                .path
+                .file_name()
+                .and_then(|value| value.to_str())
+                .unwrap_or_else(|| args.path.as_os_str().to_str().unwrap_or_default())
+                .to_string(),
+        }));
+    }
+
+    if !args.path.is_dir() {
+        return Err(AppError::invalid_args(format!(
+            "upload path must be a file or folder: {}",
+            args.path.display()
+        )));
+    }
+
+    let matcher = BulkMatcher::build(MatcherConfig {
+        include: args.include.clone(),
+        exclude: args.exclude.clone(),
+        extensions: args
+            .ext
+            .iter()
+            .map(|value| value.trim().trim_start_matches('.').to_ascii_lowercase())
+            .filter(|value| !value.is_empty())
+            .collect(),
+    })?;
+    let max_depth = if args.recursive {
+        args.max_depth.map(|value| value + 1)
+    } else {
+        Some(1)
+    };
+    let mut walker = WalkDir::new(&args.path).min_depth(1);
+    if let Some(max_depth) = max_depth {
+        walker = walker.max_depth(max_depth);
+    }
+
+    let mut items = Vec::new();
+    for entry in walker {
+        let entry = entry.map_err(|error| {
+            AppError::invalid_args(format!("failed to scan {}: {error}", args.path.display()))
+        })?;
+
+        if !entry.file_type().is_file() {
+            continue;
+        }
+
+        let absolute_path = entry.into_path();
+        let relative_path = absolute_path
+            .strip_prefix(&args.path)
+            .map_err(|error| {
+                AppError::general(format!(
+                    "failed to compute a relative file path for {}: {error}",
+                    absolute_path.display()
+                ))
+            })?
+            .to_path_buf();
+
+        if !matcher.matches(&relative_path) {
+            continue;
+        }
+
+        items.push(UploadItem {
+            absolute_path,
+            output_path: relative_path.to_string_lossy().replace('\\', "/"),
+        });
+
+        if let Some(limit) = args.limit {
+            if items.len() >= limit {
+                break;
+            }
+        }
+    }
+
+    if items.is_empty() {
+        return Err(AppError::invalid_args(format!(
+            "no files matched {}",
+            args.path.display()
+        )));
+    }
+
+    Ok(UploadPlan::Bulk(items))
+}
+
+fn validate_single_file_flags(args: &UploadCommand) -> AppResult<()> {
+    if !args.include.is_empty()
+        || !args.exclude.is_empty()
+        || !args.ext.is_empty()
+        || args.recursive
+        || args.max_depth.is_some()
+        || args.limit.is_some()
+    {
+        return Err(AppError::invalid_args(
+            "include/exclude/ext/recursive/max-depth/limit are only supported for folder uploads",
+        ));
+    }
+
+    Ok(())
+}
+
+fn prepare_upload(
+    item: UploadItem,
+    asset_type_override: Option<UploadAssetType>,
+) -> AppResult<PreparedUpload> {
+    let metadata = fs::metadata(&item.absolute_path).map_err(|error| {
+        AppError::invalid_args(format!(
+            "failed to inspect {}: {error}",
+            item.absolute_path.display()
+        ))
+    })?;
+
+    if metadata.len() > MAX_UPLOAD_SIZE_BYTES {
+        return Err(AppError::invalid_args(format!(
+            "{} is {} bytes, which exceeds the 20 MB Roblox upload limit",
+            item.absolute_path.display(),
+            metadata.len()
+        )));
+    }
+
+    let asset_type = AssetType::from_cli(asset_type_override, &item.absolute_path)?;
+
+    Ok(PreparedUpload {
+        content_type: asset_type.content_type(&item.absolute_path)?,
+        display_name: file_stem(&item.absolute_path)?,
+        asset_type,
+        file_path: item.absolute_path,
+        output_path: item.output_path,
+    })
+}
+
+async fn execute_upload(
+    client: &RobloxAssetsClient,
+    prepared: PreparedUpload,
+    creator: CreatorTarget,
+    yield_until_done: bool,
+    args: &UploadCommand,
+) -> AppResult<UploadResult> {
+    let file_name = prepared
+        .file_path
         .file_name()
         .and_then(|value| value.to_str())
         .ok_or_else(|| {
             AppError::invalid_args(format!(
                 "could not determine the file name for {}",
-                args.path.display()
+                prepared.file_path.display()
             ))
         })?
         .to_string();
-    let file_bytes = fs::read(&args.path).map_err(|error| {
-        AppError::upload(format!("failed to read {}: {error}", args.path.display()))
+    let description = args
+        .description
+        .clone()
+        .filter(|value| !value.trim().is_empty());
+    let file_bytes = fs::read(&prepared.file_path).map_err(|error| {
+        AppError::upload(format!(
+            "failed to read {}: {error}",
+            prepared.file_path.display()
+        ))
     })?;
-    let output_mode = args.output.unwrap_or(if args.yield_until_done {
-        UploadOutput::Id
-    } else {
-        UploadOutput::Job
-    });
-
-    let client = RobloxAssetsClient::new(api_key);
     let create_response = client
         .create_asset(CreateAssetParams {
-            asset_type: asset_type.api_name().to_string(),
-            display_name: display_name.clone(),
+            asset_type: prepared.asset_type.api_name().to_string(),
+            display_name: prepared.display_name.clone(),
             description,
             creator,
             file_name,
             file_bytes,
-            content_type,
+            content_type: prepared.content_type,
         })
         .await?;
-    let mut output = UploadJsonOutput {
-        file: args
-            .path
-            .file_name()
-            .and_then(|value| value.to_str())
-            .unwrap_or_else(|| args.path.as_os_str().to_str().unwrap_or_default())
-            .to_string(),
-        operation_id: create_response.path.clone(),
+
+    let mut result = UploadResult {
+        file: prepared.output_path,
+        operation_id: Some(create_response.path.clone()),
         asset_id: None,
-        asset_type: asset_type.api_name().to_string(),
-        display_name,
+        asset_type: Some(prepared.asset_type.api_name().to_string()),
+        display_name: Some(prepared.display_name),
+        error: None,
+        message: None,
     };
 
-    if args.yield_until_done {
+    if yield_until_done {
         let poll_interval = args.poll_interval.unwrap_or(std::time::Duration::from_secs(
             DEFAULT_POLL_INTERVAL_SECONDS,
         ));
@@ -246,7 +484,7 @@ pub async fn run_upload<S: SecretStore>(
         }
 
         let operation =
-            wait_for_operation(&client, &create_response.path, poll_interval, timeout).await?;
+            wait_for_operation(client, &create_response.path, poll_interval, timeout).await?;
         let asset_id = operation.asset_id().ok_or_else(|| {
             if let Some(message) = operation.error_message() {
                 AppError::upload(format!("operation {} failed: {message}", operation.path))
@@ -257,34 +495,125 @@ pub async fn run_upload<S: SecretStore>(
                 ))
             }
         })?;
-
-        output.asset_id = Some(asset_id.to_string());
+        result.asset_id = Some(asset_id.to_string());
     }
 
+    Ok(result)
+}
+
+fn print_single_result(result: UploadResult, output_mode: UploadOutput) -> AppResult<()> {
     match output_mode {
         UploadOutput::Job => {
-            println!("{}", output.operation_id);
+            println!(
+                "{}",
+                result
+                    .operation_id
+                    .as_deref()
+                    .ok_or_else(|| AppError::general("missing operation id"))?
+            );
             Ok(())
         }
         UploadOutput::Id => {
-            let asset_id = output.asset_id.as_deref().ok_or_else(|| {
-                AppError::invalid_args("--output id requires --yield for uploads")
-            })?;
-            println!("{asset_id}");
+            println!(
+                "{}",
+                result
+                    .asset_id
+                    .as_deref()
+                    .ok_or_else(|| AppError::invalid_args(
+                        "--output id requires --yield for uploads"
+                    ))?
+            );
             Ok(())
         }
-        UploadOutput::Json => print_json(&output),
+        UploadOutput::Json => print_json(&result),
+        UploadOutput::Jsonl => print_json_compact(&result),
+        UploadOutput::Map => {
+            let value = if let Some(asset_id) = result.asset_id {
+                serde_json::json!({ result.file: asset_id })
+            } else {
+                serde_json::json!({
+                    result.file: result.operation_id.ok_or_else(|| AppError::general("missing operation id"))?
+                })
+            };
+            print_json(&value)
+        }
         UploadOutput::Pretty => {
-            println!("Operation ID: {}", output.operation_id);
-            if let Some(asset_id) = &output.asset_id {
+            if let Some(operation_id) = &result.operation_id {
+                println!("Operation ID: {operation_id}");
+            }
+            if let Some(asset_id) = &result.asset_id {
                 println!("Asset ID: {asset_id}");
             }
-            println!("File: {}", output.file);
-            println!("Asset Type: {}", output.asset_type);
-            println!("Display Name: {}", output.display_name);
+            println!("File: {}", result.file);
+            if let Some(asset_type) = &result.asset_type {
+                println!("Asset Type: {asset_type}");
+            }
+            if let Some(display_name) = &result.display_name {
+                println!("Display Name: {display_name}");
+            }
             Ok(())
         }
     }
+}
+
+fn print_bulk_results(
+    results: &[UploadResult],
+    output_mode: UploadOutput,
+    yield_until_done: bool,
+) -> AppResult<()> {
+    match output_mode {
+        UploadOutput::Json => print_json(results),
+        UploadOutput::Jsonl => {
+            for result in results {
+                print_json_compact(result)?;
+            }
+            Ok(())
+        }
+        UploadOutput::Map => {
+            let mut value = BTreeMap::new();
+            for result in results {
+                let mapped_value = if yield_until_done {
+                    result.asset_id.clone()
+                } else {
+                    result.operation_id.clone()
+                }
+                .ok_or_else(|| AppError::general("missing output value for map mode"))?;
+                value.insert(result.file.clone(), mapped_value);
+            }
+            print_json(&value)
+        }
+        UploadOutput::Pretty => {
+            println!("Uploaded {} file(s):", results.len());
+            for result in results {
+                if let Some(asset_id) = &result.asset_id {
+                    println!("{} -> {}", result.file, asset_id);
+                } else if let Some(operation_id) = &result.operation_id {
+                    println!("{} -> {}", result.file, operation_id);
+                }
+            }
+            Ok(())
+        }
+        UploadOutput::Job | UploadOutput::Id => Err(AppError::invalid_args(
+            "folder uploads support --output json, jsonl, map, or pretty",
+        )),
+    }
+}
+
+fn print_dry_run(plan: &UploadPlan) -> AppResult<()> {
+    match plan {
+        UploadPlan::Single(item) => {
+            println!("Would upload 1 file:");
+            println!("{}", item.output_path);
+        }
+        UploadPlan::Bulk(items) => {
+            println!("Would upload {} files:", items.len());
+            for item in items {
+                println!("{}", item.output_path);
+            }
+        }
+    }
+
+    Ok(())
 }
 
 fn resolve_creator<S: SecretStore>(
@@ -304,6 +633,24 @@ fn resolve_creator<S: SecretStore>(
     CreatorTarget::parse(&raw_creator)
 }
 
+fn build_glob_set(patterns: &[String]) -> AppResult<Option<GlobSet>> {
+    if patterns.is_empty() {
+        return Ok(None);
+    }
+
+    let mut builder = GlobSetBuilder::new();
+    for pattern in patterns {
+        builder.add(Glob::new(pattern).map_err(|error| {
+            AppError::invalid_args(format!("invalid glob pattern `{pattern}`: {error}"))
+        })?);
+    }
+
+    builder
+        .build()
+        .map(Some)
+        .map_err(|error| AppError::invalid_args(format!("invalid glob configuration: {error}")))
+}
+
 fn extension(path: &Path) -> AppResult<String> {
     path.extension()
         .and_then(|value| value.to_str())
@@ -320,7 +667,7 @@ fn extension(path: &Path) -> AppResult<String> {
 mod tests {
     use std::path::Path;
 
-    use super::AssetType;
+    use super::{AssetType, BulkMatcher, MatcherConfig};
 
     #[test]
     fn infers_image_asset_type() {
@@ -336,5 +683,18 @@ mod tests {
             error.to_string(),
             "file extension .mp3 is not supported for model uploads"
         );
+    }
+
+    #[test]
+    fn matcher_respects_include_and_exclude_rules() {
+        let matcher = BulkMatcher::build(MatcherConfig {
+            include: vec!["**/*.png".to_string()],
+            exclude: vec!["**/drafts/**".to_string()],
+            extensions: Default::default(),
+        })
+        .expect("matcher");
+
+        assert!(matcher.matches(Path::new("ui/button.png")));
+        assert!(!matcher.matches(Path::new("drafts/button.png")));
     }
 }

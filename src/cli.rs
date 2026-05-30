@@ -50,6 +50,27 @@ pub struct UploadCommand {
     /// Upload owner, for example user:123 or group:456
     #[arg(long)]
     pub creator: Option<String>,
+    /// Only include files that match this glob. Can be repeated.
+    #[arg(long)]
+    pub include: Vec<String>,
+    /// Exclude files that match this glob. Can be repeated.
+    #[arg(long)]
+    pub exclude: Vec<String>,
+    /// Restrict files by extension, for example png,jpg
+    #[arg(long, value_delimiter = ',')]
+    pub ext: Vec<String>,
+    /// Recurse into subdirectories for folder uploads
+    #[arg(long)]
+    pub recursive: bool,
+    /// Maximum directory depth to scan when uploading folders
+    #[arg(long)]
+    pub max_depth: Option<usize>,
+    /// Maximum number of files to upload
+    #[arg(long)]
+    pub limit: Option<usize>,
+    /// Print the files that would upload without sending requests
+    #[arg(long)]
+    pub dry_run: bool,
     /// Wait for the operation to finish and return the final asset
     #[arg(long = "yield")]
     pub yield_until_done: bool,
@@ -118,6 +139,8 @@ pub enum UploadOutput {
     Job,
     Id,
     Json,
+    Jsonl,
+    Map,
     Pretty,
 }
 

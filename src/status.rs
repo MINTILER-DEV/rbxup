@@ -81,9 +81,29 @@ pub async fn wait_for_operation(
     timeout: Duration,
 ) -> AppResult<AssetOperation> {
     let started_at = Instant::now();
+    let mut rate_limit_retries = 0u32;
 
     loop {
-        let operation = client.get_operation(operation_id).await?;
+        let operation = match client.get_operation(operation_id).await {
+            Ok(operation) => {
+                rate_limit_retries = 0;
+                operation
+            }
+            Err(error) if error.is_rate_limited() => {
+                rate_limit_retries += 1;
+                if started_at.elapsed() >= timeout {
+                    return Err(AppError::timeout(format!(
+                        "upload still processing after {} while polling operation {}",
+                        humantime::format_duration(timeout),
+                        operation_id
+                    )));
+                }
+
+                sleep(rate_limit_backoff(rate_limit_retries)).await;
+                continue;
+            }
+            Err(error) => return Err(error),
+        };
         if operation.done {
             return Ok(operation);
         }
@@ -98,4 +118,9 @@ pub async fn wait_for_operation(
 
         sleep(poll_interval).await;
     }
+}
+
+fn rate_limit_backoff(retry: u32) -> Duration {
+    let seconds = 2u64.saturating_pow(retry.min(4));
+    Duration::from_secs(seconds)
 }

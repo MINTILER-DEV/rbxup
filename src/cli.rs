@@ -34,7 +34,7 @@ pub enum Commands {
     Status(StatusCommand),
 }
 
-#[derive(Debug, clap::Args)]
+#[derive(Debug, Clone, clap::Args)]
 pub struct UploadCommand {
     /// File path to upload
     pub path: PathBuf,
@@ -71,6 +71,9 @@ pub struct UploadCommand {
     /// Print the files that would upload without sending requests
     #[arg(long)]
     pub dry_run: bool,
+    /// Number of folder uploads to process in parallel
+    #[arg(long)]
+    pub concurrency: Option<usize>,
     /// Wait for the operation to finish and return the final asset
     #[arg(long = "yield")]
     pub yield_until_done: bool,

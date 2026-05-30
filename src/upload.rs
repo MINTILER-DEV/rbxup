@@ -4,6 +4,8 @@ use std::path::{Path, PathBuf};
 
 use globset::{Glob, GlobSet, GlobSetBuilder};
 use serde::Serialize;
+use tokio::task::JoinSet;
+use tokio::time::sleep;
 use walkdir::WalkDir;
 
 use crate::cli::{UploadAssetType, UploadCommand, UploadOutput};
@@ -17,6 +19,8 @@ use crate::status::wait_for_operation;
 const MAX_UPLOAD_SIZE_BYTES: u64 = 20 * 1024 * 1024;
 const DEFAULT_POLL_INTERVAL_SECONDS: u64 = 2;
 const DEFAULT_YIELD_TIMEOUT_SECONDS: u64 = 300;
+const DEFAULT_BULK_CONCURRENCY: usize = 3;
+const MAX_RATE_LIMIT_RETRIES: u32 = 4;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum AssetType {
@@ -249,22 +253,9 @@ pub async fn run_upload<S: SecretStore>(
         UploadPlan::Bulk(items) => {
             let output_mode = args.output.unwrap_or(UploadOutput::Jsonl);
             validate_bulk_output(output_mode)?;
-            let mut results = Vec::with_capacity(items.len());
-
-            for item in items {
-                let prepared = prepare_upload(item, args.asset_type)?;
-                let result = execute_upload(
-                    &client,
-                    prepared,
-                    creator.clone(),
-                    args.yield_until_done,
-                    &args,
-                )
-                .await?;
-                results.push(result);
-            }
-
+            let results = execute_bulk_uploads(client, items, creator, args.clone()).await?;
             print_bulk_results(&results, output_mode, args.yield_until_done)
+                .and_then(|_| summarize_bulk_results(&results))
         }
     }
 }
@@ -376,9 +367,10 @@ fn validate_single_file_flags(args: &UploadCommand) -> AppResult<()> {
         || args.recursive
         || args.max_depth.is_some()
         || args.limit.is_some()
+        || args.concurrency.is_some()
     {
         return Err(AppError::invalid_args(
-            "include/exclude/ext/recursive/max-depth/limit are only supported for folder uploads",
+            "include/exclude/ext/recursive/max-depth/limit/concurrency are only supported for folder uploads",
         ));
     }
 
@@ -501,6 +493,170 @@ async fn execute_upload(
     Ok(result)
 }
 
+async fn execute_bulk_uploads(
+    client: RobloxAssetsClient,
+    items: Vec<UploadItem>,
+    creator: CreatorTarget,
+    args: UploadCommand,
+) -> AppResult<Vec<UploadResult>> {
+    let concurrency = args.concurrency.unwrap_or(DEFAULT_BULK_CONCURRENCY);
+    if concurrency == 0 {
+        return Err(AppError::invalid_args("--concurrency must be at least 1"));
+    }
+
+    let total = items.len();
+    let mut results = Vec::with_capacity(total);
+    let mut join_set = JoinSet::new();
+    let mut next_index = 0usize;
+    let mut items_iter = items.into_iter().enumerate();
+
+    while next_index < concurrency {
+        if let Some((index, item)) = items_iter.next() {
+            spawn_bulk_task(
+                &mut join_set,
+                client.clone(),
+                creator.clone(),
+                args.clone(),
+                index,
+                item,
+            );
+            next_index += 1;
+        } else {
+            break;
+        }
+    }
+
+    while let Some(joined) = join_set.join_next().await {
+        let (index, result) = joined.map_err(|error| {
+            AppError::general(format!("bulk upload task failed unexpectedly: {error}"))
+        })?;
+        results.push((index, result));
+
+        if let Some((index, item)) = items_iter.next() {
+            spawn_bulk_task(
+                &mut join_set,
+                client.clone(),
+                creator.clone(),
+                args.clone(),
+                index,
+                item,
+            );
+        }
+    }
+
+    results.sort_by_key(|(index, _)| *index);
+    Ok(results.into_iter().map(|(_, result)| result).collect())
+}
+
+fn spawn_bulk_task(
+    join_set: &mut JoinSet<(usize, UploadResult)>,
+    client: RobloxAssetsClient,
+    creator: CreatorTarget,
+    args: UploadCommand,
+    index: usize,
+    item: UploadItem,
+) {
+    join_set.spawn(async move {
+        let output_path = item.output_path.clone();
+        let result = match prepare_upload(item, args.asset_type) {
+            Ok(prepared) => execute_upload_with_retries(
+                &client,
+                prepared,
+                creator,
+                args.yield_until_done,
+                &args,
+            )
+            .await
+            .unwrap_or_else(|error| failure_result(output_path, error)),
+            Err(error) => failure_result(output_path, error),
+        };
+
+        (index, result)
+    });
+}
+
+async fn execute_upload_with_retries(
+    client: &RobloxAssetsClient,
+    prepared: PreparedUpload,
+    creator: CreatorTarget,
+    yield_until_done: bool,
+    args: &UploadCommand,
+) -> AppResult<UploadResult> {
+    let mut retry = 0u32;
+
+    loop {
+        match execute_upload(
+            client,
+            prepared.clone(),
+            creator.clone(),
+            yield_until_done,
+            args,
+        )
+        .await
+        {
+            Ok(result) => return Ok(result),
+            Err(error) if error.is_rate_limited() && retry < MAX_RATE_LIMIT_RETRIES => {
+                retry += 1;
+                sleep(rate_limit_backoff(retry)).await;
+            }
+            Err(error) => return Err(error),
+        }
+    }
+}
+
+fn rate_limit_backoff(retry: u32) -> std::time::Duration {
+    let seconds = 2u64.saturating_pow(retry.saturating_sub(1).min(4));
+    std::time::Duration::from_secs(seconds.max(1))
+}
+
+fn failure_result(file: String, error: AppError) -> UploadResult {
+    UploadResult {
+        file,
+        operation_id: None,
+        asset_id: None,
+        asset_type: None,
+        display_name: None,
+        error: Some(error_label(error.code()).to_string()),
+        message: Some(error.to_string()),
+    }
+}
+
+fn error_label(code: crate::error::ExitCode) -> &'static str {
+    match code {
+        crate::error::ExitCode::General => "GeneralError",
+        crate::error::ExitCode::Auth => "AuthError",
+        crate::error::ExitCode::Config => "ConfigError",
+        crate::error::ExitCode::UploadFailed => "UploadFailed",
+        crate::error::ExitCode::PartialFailure => "PartialFailure",
+        crate::error::ExitCode::RateLimited => "RateLimited",
+        crate::error::ExitCode::Timeout => "Timeout",
+        crate::error::ExitCode::InvalidArguments => "InvalidArguments",
+    }
+}
+
+fn summarize_bulk_results(results: &[UploadResult]) -> AppResult<()> {
+    let failures = results
+        .iter()
+        .filter(|result| result.error.is_some())
+        .count();
+    if failures == 0 {
+        return Ok(());
+    }
+
+    if failures == results.len() {
+        Err(AppError::upload(format!(
+            "all {} uploads failed",
+            results.len()
+        )))
+    } else {
+        Err(AppError::partial_failure(format!(
+            "{} of {} uploads failed",
+            failures,
+            results.len()
+        )))
+    }
+}
+
 fn print_single_result(result: UploadResult, output_mode: UploadOutput) -> AppResult<()> {
     match output_mode {
         UploadOutput::Job => {
@@ -576,16 +732,25 @@ fn print_bulk_results(
                     result.asset_id.clone()
                 } else {
                     result.operation_id.clone()
+                };
+
+                if let Some(mapped_value) = mapped_value {
+                    value.insert(result.file.clone(), mapped_value);
                 }
-                .ok_or_else(|| AppError::general("missing output value for map mode"))?;
-                value.insert(result.file.clone(), mapped_value);
             }
             print_json(&value)
         }
         UploadOutput::Pretty => {
             println!("Uploaded {} file(s):", results.len());
             for result in results {
-                if let Some(asset_id) = &result.asset_id {
+                if let Some(error) = &result.error {
+                    println!(
+                        "{} -> {} ({})",
+                        result.file,
+                        error,
+                        result.message.as_deref().unwrap_or("no additional details")
+                    );
+                } else if let Some(asset_id) = &result.asset_id {
                     println!("{} -> {}", result.file, asset_id);
                 } else if let Some(operation_id) = &result.operation_id {
                     println!("{} -> {}", result.file, operation_id);
@@ -667,7 +832,7 @@ fn extension(path: &Path) -> AppResult<String> {
 mod tests {
     use std::path::Path;
 
-    use super::{AssetType, BulkMatcher, MatcherConfig};
+    use super::{AssetType, BulkMatcher, MatcherConfig, UploadResult, summarize_bulk_results};
 
     #[test]
     fn infers_image_asset_type() {
@@ -696,5 +861,32 @@ mod tests {
 
         assert!(matcher.matches(Path::new("ui/button.png")));
         assert!(!matcher.matches(Path::new("drafts/button.png")));
+    }
+
+    #[test]
+    fn summarize_bulk_results_uses_partial_failure_exit_code() {
+        let results = vec![
+            UploadResult {
+                file: "good.png".to_string(),
+                operation_id: Some("operations/a".to_string()),
+                asset_id: None,
+                asset_type: None,
+                display_name: None,
+                error: None,
+                message: None,
+            },
+            UploadResult {
+                file: "bad.txt".to_string(),
+                operation_id: None,
+                asset_id: None,
+                asset_type: None,
+                display_name: None,
+                error: Some("InvalidArguments".to_string()),
+                message: Some("bad".to_string()),
+            },
+        ];
+
+        let error = summarize_bulk_results(&results).expect_err("summary should fail");
+        assert_eq!(error.exit_code(), 5);
     }
 }

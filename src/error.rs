@@ -59,18 +59,34 @@ impl AppError {
         }
     }
 
+    pub fn partial_failure(message: impl Into<String>) -> Self {
+        Self {
+            code: ExitCode::PartialFailure,
+            message: message.into(),
+        }
+    }
+
+    pub fn code(&self) -> ExitCode {
+        self.code
+    }
+
+    pub fn is_rate_limited(&self) -> bool {
+        matches!(self.code, ExitCode::RateLimited)
+    }
+
     pub fn exit_code(&self) -> i32 {
         self.code as i32
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(i32)]
 pub enum ExitCode {
     General = 1,
     Auth = 2,
     Config = 3,
     UploadFailed = 4,
+    PartialFailure = 5,
     RateLimited = 6,
     Timeout = 7,
     InvalidArguments = 8,

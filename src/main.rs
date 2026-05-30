@@ -1,6 +1,8 @@
 mod app;
+mod asset;
 mod auth;
 mod cli;
+mod completions;
 mod config;
 mod creator;
 mod doctor;

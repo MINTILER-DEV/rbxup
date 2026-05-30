@@ -1,8 +1,10 @@
+use crate::asset::{run_info, run_list, run_quotas, run_rollback, run_versions};
 use crate::auth::{login as auth_login, logout as auth_logout, whoami as auth_whoami};
 use crate::cli::{
-    AuthCommand, AuthOutput, Cli, Commands, ConfigCommand, ConfigSetCommand, DoctorArgs,
-    DoctorOutput, InitCommand,
+    AuthCommand, AuthOutput, Cli, Commands, CompletionsCommand, ConfigCommand, ConfigSetCommand,
+    DoctorArgs, DoctorOutput, InitCommand,
 };
+use crate::completions::run_completions;
 use crate::config::{ConfigManager, SecretStore, SystemSecretStore};
 use crate::creator::CreatorTarget;
 use crate::doctor::DoctorReport;
@@ -29,8 +31,14 @@ pub async fn run(cli: Cli) -> AppResult<()> {
         Commands::Config { command } => run_config(command, &config_manager),
         Commands::Doctor(args) => run_doctor(args, &config_manager),
         Commands::Auth { command } => run_auth(command, &config_manager).await,
+        Commands::Completions(args) => run_completion_command(args),
+        Commands::Info(args) => run_info(args, &config_manager).await,
+        Commands::List(args) => run_list(args, &config_manager).await,
+        Commands::Quotas(args) => run_quotas(args, &config_manager).await,
+        Commands::Rollback(args) => run_rollback(args, &config_manager).await,
         Commands::Status(args) => run_status(args, &config_manager).await,
         Commands::Update(args) => run_update(args, &config_manager).await,
+        Commands::Versions(args) => run_versions(args, &config_manager).await,
         Commands::Upload(args) => run_upload(args, &config_manager).await,
     }
 }
@@ -42,6 +50,10 @@ fn run_init(args: InitCommand) -> AppResult<()> {
         "path": path.display().to_string(),
     });
     print_json(&payload)
+}
+
+fn run_completion_command(args: CompletionsCommand) -> AppResult<()> {
+    run_completions(args.shell)
 }
 
 fn run_config<S: SecretStore>(

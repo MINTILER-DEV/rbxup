@@ -8,6 +8,8 @@ use crate::error::{AppError, AppResult};
 
 const ASSET_CREATE_URL: &str = "https://apis.roblox.com/assets/v1/assets";
 const ASSET_OPERATION_URL: &str = "https://apis.roblox.com/assets/v1/operations";
+const USER_ASSET_QUOTAS_URL: &str = "https://apis.roblox.com/cloud/v2/users";
+const USER_INVENTORY_URL: &str = "https://apis.roblox.com/cloud/v2/users";
 
 #[derive(Debug, Clone)]
 pub struct CreateAssetParams {
@@ -166,6 +168,145 @@ impl RobloxAssetsClient {
         }
     }
 
+    pub async fn get_asset(
+        &self,
+        asset_id: &str,
+        read_mask: Option<&str>,
+    ) -> AppResult<serde_json::Value> {
+        let mut request = self
+            .auth_provider
+            .apply(self.client.get(format!("{ASSET_CREATE_URL}/{asset_id}")));
+        if let Some(read_mask) = read_mask {
+            request = request.query(&[("readMask", read_mask)]);
+        }
+
+        self.send_json_request(request, "asset info").await
+    }
+
+    pub async fn list_asset_versions(
+        &self,
+        asset_id: &str,
+        page_size: Option<u32>,
+        page_token: Option<&str>,
+    ) -> AppResult<serde_json::Value> {
+        let mut request = self.auth_provider.apply(
+            self.client
+                .get(format!("{ASSET_CREATE_URL}/{asset_id}/versions")),
+        );
+        if let Some(page_size) = page_size {
+            request = request.query(&[("maxPageSize", page_size)]);
+        }
+        if let Some(page_token) = page_token {
+            request = request.query(&[("pageToken", page_token)]);
+        }
+
+        self.send_json_request(request, "asset versions").await
+    }
+
+    pub async fn get_asset_version(
+        &self,
+        asset_id: &str,
+        version_number: u64,
+    ) -> AppResult<serde_json::Value> {
+        self.send_json_request(
+            self.auth_provider.apply(self.client.get(format!(
+                "{ASSET_CREATE_URL}/{asset_id}/versions/{version_number}"
+            ))),
+            "asset version",
+        )
+        .await
+    }
+
+    pub async fn rollback_asset_version(
+        &self,
+        asset_id: &str,
+        version_number: u64,
+    ) -> AppResult<CreateAssetResponse> {
+        let request = self
+            .auth_provider
+            .apply(
+                self.client
+                    .post(format!("{ASSET_CREATE_URL}/{asset_id}/versions:rollback")),
+            )
+            .json(&serde_json::json!({
+                "assetVersion": format!("assets/{asset_id}/versions/{version_number}"),
+            }));
+
+        let response = request.send().await.map_err(|error| {
+            AppError::upload(format!("failed to send rollback request: {error}"))
+        })?;
+        let status = response.status();
+
+        if status.is_success() {
+            return response
+                .json::<CreateAssetResponse>()
+                .await
+                .map_err(|error| {
+                    AppError::upload(format!(
+                        "rollback succeeded but the response was invalid: {error}"
+                    ))
+                });
+        }
+
+        let body = response
+            .text()
+            .await
+            .unwrap_or_else(|_| "<response body unavailable>".to_string());
+        let body = body.trim();
+        let message = format!(
+            "Roblox rollback failed with HTTP {}: {}",
+            status.as_u16(),
+            if body.is_empty() {
+                "<empty response body>"
+            } else {
+                body
+            }
+        );
+
+        if status.as_u16() == 401 || status.as_u16() == 403 {
+            Err(AppError::auth(message))
+        } else if status.as_u16() == 429 {
+            Err(AppError::rate_limited(message))
+        } else {
+            Err(AppError::upload(message))
+        }
+    }
+
+    pub async fn get_asset_quotas(&self, user_id: &str) -> AppResult<serde_json::Value> {
+        self.send_json_request(
+            self.auth_provider.apply(
+                self.client
+                    .get(format!("{USER_ASSET_QUOTAS_URL}/{user_id}/asset-quotas")),
+            ),
+            "asset quotas",
+        )
+        .await
+    }
+
+    pub async fn list_inventory_items(
+        &self,
+        user_id: &str,
+        filter: Option<&str>,
+        page_size: Option<u32>,
+        page_token: Option<&str>,
+    ) -> AppResult<serde_json::Value> {
+        let mut request = self.auth_provider.apply(
+            self.client
+                .get(format!("{USER_INVENTORY_URL}/{user_id}/inventory-items")),
+        );
+        if let Some(filter) = filter {
+            request = request.query(&[("filter", filter)]);
+        }
+        if let Some(page_size) = page_size {
+            request = request.query(&[("maxPageSize", page_size)]);
+        }
+        if let Some(page_token) = page_token {
+            request = request.query(&[("pageToken", page_token)]);
+        }
+
+        self.send_json_request(request, "inventory list").await
+    }
+
     async fn send_asset_request(
         &self,
         request: reqwest::RequestBuilder,
@@ -209,6 +350,48 @@ impl RobloxAssetsClient {
             Err(AppError::rate_limited(message))
         } else {
             Err(AppError::upload(message))
+        }
+    }
+
+    async fn send_json_request(
+        &self,
+        request: reqwest::RequestBuilder,
+        action: &str,
+    ) -> AppResult<serde_json::Value> {
+        let response = request.send().await.map_err(|error| {
+            AppError::general(format!("failed to send {action} request: {error}"))
+        })?;
+        let status = response.status();
+
+        if status.is_success() {
+            return response.json::<serde_json::Value>().await.map_err(|error| {
+                AppError::general(format!(
+                    "{action} succeeded but the response was invalid: {error}"
+                ))
+            });
+        }
+
+        let body = response
+            .text()
+            .await
+            .unwrap_or_else(|_| "<response body unavailable>".to_string());
+        let body = body.trim();
+        let message = format!(
+            "Roblox {action} failed with HTTP {}: {}",
+            status.as_u16(),
+            if body.is_empty() {
+                "<empty response body>"
+            } else {
+                body
+            }
+        );
+
+        if status.as_u16() == 401 || status.as_u16() == 403 {
+            Err(AppError::auth(message))
+        } else if status.as_u16() == 429 {
+            Err(AppError::rate_limited(message))
+        } else {
+            Err(AppError::general(message))
         }
     }
 }

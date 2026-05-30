@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 use std::time::Duration;
 
-use clap::{Parser, Subcommand, ValueEnum};
+use clap::{CommandFactory, Parser, Subcommand, ValueEnum};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Parser)]
@@ -13,6 +13,12 @@ use serde::{Deserialize, Serialize};
 pub struct Cli {
     #[command(subcommand)]
     pub command: Commands,
+}
+
+impl Cli {
+    pub fn command() -> clap::Command {
+        <Self as CommandFactory>::command()
+    }
 }
 
 #[derive(Debug, Subcommand)]
@@ -37,6 +43,18 @@ pub enum Commands {
     Status(StatusCommand),
     /// Update an existing asset
     Update(UpdateCommand),
+    /// Read asset metadata
+    Info(InfoCommand),
+    /// List inventory items for a user
+    List(ListCommand),
+    /// List asset quotas for a user
+    Quotas(QuotasCommand),
+    /// List asset versions or fetch one specific version
+    Versions(VersionsCommand),
+    /// Roll an asset back to a previous version
+    Rollback(RollbackCommand),
+    /// Print shell completions
+    Completions(CompletionsCommand),
 }
 
 #[derive(Debug, Clone, clap::Args)]
@@ -144,6 +162,91 @@ pub struct UpdateCommand {
     pub output: Option<UploadOutput>,
 }
 
+#[derive(Debug, Clone, clap::Args)]
+pub struct InfoCommand {
+    /// Roblox asset ID
+    pub asset_id: String,
+    /// Optional readMask for additional metadata fields
+    #[arg(long)]
+    pub read_mask: Option<String>,
+    /// Stdout output mode
+    #[arg(long, value_enum, default_value_t = ReadOutput::Json)]
+    pub output: ReadOutput,
+}
+
+#[derive(Debug, Clone, clap::Args)]
+pub struct ListCommand {
+    /// User ID to inspect. Defaults to OAuth user ID or config creator if it is a user.
+    #[arg(long)]
+    pub user_id: Option<String>,
+    /// Optional raw inventory filter string
+    #[arg(long)]
+    pub filter: Option<String>,
+    /// Page token returned by a previous response
+    #[arg(long)]
+    pub page_token: Option<String>,
+    /// Max page size
+    #[arg(long)]
+    pub page_size: Option<u32>,
+    /// Stdout output mode
+    #[arg(long, value_enum, default_value_t = ReadOutput::Json)]
+    pub output: ReadOutput,
+}
+
+#[derive(Debug, Clone, clap::Args)]
+pub struct QuotasCommand {
+    /// User ID to inspect. Defaults to OAuth user ID or config creator if it is a user.
+    #[arg(long)]
+    pub user_id: Option<String>,
+    /// Stdout output mode
+    #[arg(long, value_enum, default_value_t = ReadOutput::Json)]
+    pub output: ReadOutput,
+}
+
+#[derive(Debug, Clone, clap::Args)]
+pub struct VersionsCommand {
+    /// Roblox asset ID
+    pub asset_id: String,
+    /// Optional version number for a specific version lookup
+    pub version_number: Option<u64>,
+    /// Page token returned by a previous response
+    #[arg(long)]
+    pub page_token: Option<String>,
+    /// Max page size
+    #[arg(long)]
+    pub page_size: Option<u32>,
+    /// Stdout output mode
+    #[arg(long, value_enum, default_value_t = ReadOutput::Json)]
+    pub output: ReadOutput,
+}
+
+#[derive(Debug, Clone, clap::Args)]
+pub struct RollbackCommand {
+    /// Roblox asset ID
+    pub asset_id: String,
+    /// Version number to roll back to
+    pub version_number: u64,
+    /// Wait for the operation to finish and return the final asset
+    #[arg(long = "yield")]
+    pub yield_until_done: bool,
+    /// Maximum amount of time to wait when --yield is enabled
+    #[arg(long, value_parser = parse_duration)]
+    pub timeout: Option<Duration>,
+    /// Delay between status polls when --yield is enabled
+    #[arg(long, value_parser = parse_duration)]
+    pub poll_interval: Option<Duration>,
+    /// Stdout output mode
+    #[arg(long, value_enum)]
+    pub output: Option<UploadOutput>,
+}
+
+#[derive(Debug, Clone, clap::Args)]
+pub struct CompletionsCommand {
+    /// Shell to generate completions for
+    #[arg(value_enum)]
+    pub shell: CompletionShell,
+}
+
 #[derive(Debug, Subcommand)]
 pub enum ConfigCommand {
     /// Print the effective local configuration
@@ -207,6 +310,22 @@ pub enum StatusOutput {
 pub enum AuthOutput {
     Json,
     Pretty,
+}
+
+#[derive(Debug, Clone, Copy, ValueEnum)]
+pub enum ReadOutput {
+    Json,
+    Pretty,
+}
+
+#[derive(Debug, Clone, Copy, ValueEnum)]
+pub enum CompletionShell {
+    Bash,
+    Elvish,
+    Fish,
+    #[value(name = "powershell", alias = "power-shell")]
+    PowerShell,
+    Zsh,
 }
 
 fn parse_duration(value: &str) -> Result<Duration, String> {

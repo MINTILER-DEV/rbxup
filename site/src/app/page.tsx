@@ -23,10 +23,9 @@ const features = [
 
 export default function Home() {
   return (
-    <div className="space-y-10">
+    <div className="space-y-8">
       <section className="hero-grid">
-        <div className="panel relative overflow-hidden">
-          <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-cyan-400/70 to-transparent" />
+        <div className="panel">
           <div className="space-y-6">
             <div className="space-y-3">
               <span className="eyebrow">CLI for Roblox Open Cloud</span>
@@ -85,7 +84,7 @@ export default function Home() {
         </aside>
       </section>
 
-      <section className="grid gap-6 lg:grid-cols-[1.3fr_0.7fr]">
+      <section className="grid gap-5 lg:grid-cols-[1.3fr_0.7fr]">
         <div className="panel space-y-5">
           <div className="space-y-2">
             <span className="eyebrow">Why rbxup</span>

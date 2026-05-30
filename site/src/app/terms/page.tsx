@@ -41,8 +41,7 @@ export default function TermsPage() {
           Terms for using rbxup
         </h1>
         <p className="max-w-3xl text-sm leading-7 text-slate-300 sm:text-base">
-          These starter terms are intended to cover the public website and the
-          CLI release of rbxup.
+          These terms cover the public website and the CLI release of rbxup.
         </p>
       </section>
 

@@ -41,8 +41,8 @@ export default function PrivacyPage() {
           Privacy policy for rbxup
         </h1>
         <p className="max-w-3xl text-sm leading-7 text-slate-300 sm:text-base">
-          This starter privacy policy describes how rbxup handles credentials,
-          uploads, and local storage for the CLI and this informational website.
+          This page covers how rbxup handles credentials, uploads, and local
+          storage for the CLI and this website.
         </p>
       </section>
 

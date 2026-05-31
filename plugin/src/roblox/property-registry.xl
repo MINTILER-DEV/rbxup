@@ -1,0 +1,15 @@
+local ApiDump = require "@roblox/api-dump"
+local Defaults = require "@roblox/defaults"
+
+function getKnownProperties(className)
+    local classInfo = ApiDump.getClassInfo(className)
+    if classInfo ~= nil then
+        return classInfo.properties
+    end
+
+    return Defaults.MainProperties[className] ?? {}
+end
+
+return {
+    getKnownProperties = getKnownProperties,
+}

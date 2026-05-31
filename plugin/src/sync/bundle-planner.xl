@@ -1,0 +1,53 @@
+local Defaults = require "@roblox/defaults"
+
+function classifyChild(child)
+    if Defaults.BundleableClassNames[child.ClassName] then
+        return "bundleable"
+    end
+
+    return "readable"
+end
+
+function planChildren(children, threshold)
+    local readable = {}
+    local groups = {}
+
+    for _, child in children do
+        local kind = classifyChild(child)
+        if kind == "readable" then
+            table.insert(readable, child)
+        else
+            local className = string.lower(child.ClassName)
+            local bucket = groups[className]
+            if bucket == nil then
+                bucket = {}
+                groups[className] = bucket
+            end
+            table.insert(bucket, child)
+        end
+    end
+
+    local bundled = {}
+    local exploded = {}
+
+    for className, bucket in groups do
+        if #bucket >= threshold then
+            bundled[className] = bucket
+        else
+            for _, child in bucket do
+                table.insert(exploded, child)
+            end
+        end
+    end
+
+    return {
+        readable = readable,
+        bundled = bundled,
+        exploded = exploded,
+    }
+end
+
+return {
+    classifyChild = classifyChild,
+    planChildren = planChildren,
+}

@@ -55,6 +55,11 @@ pub enum Commands {
     Rollback(RollbackCommand),
     /// Print shell completions
     Completions(CompletionsCommand),
+    /// Early Studio sync commands
+    Sync {
+        #[command(subcommand)]
+        command: SyncCommand,
+    },
 }
 
 #[derive(Debug, Clone, clap::Args)]
@@ -245,6 +250,50 @@ pub struct CompletionsCommand {
     /// Shell to generate completions for
     #[arg(value_enum)]
     pub shell: CompletionShell,
+}
+
+#[derive(Debug, Subcommand)]
+pub enum SyncCommand {
+    /// Export or validate a sync project from Studio-facing files
+    Pull(SyncDirCommand),
+    /// Import a sync project into Studio-facing data
+    Push(SyncPushCommand),
+    /// Compare sync project state
+    Diff(SyncDirCommand),
+    /// Run a localhost bridge server for a sync project
+    Serve(SyncServeCommand),
+    /// Validate sync project structure and bundle files
+    Doctor(SyncDirCommand),
+}
+
+#[derive(Debug, Clone, clap::Args)]
+pub struct SyncDirCommand {
+    /// Sync project directory
+    pub dir: PathBuf,
+    /// Stdout output mode
+    #[arg(long, value_enum, default_value_t = ReadOutput::Json)]
+    pub output: ReadOutput,
+}
+
+#[derive(Debug, Clone, clap::Args)]
+pub struct SyncPushCommand {
+    /// Sync project directory
+    pub dir: PathBuf,
+    /// Delete synced Studio instances missing from disk
+    #[arg(long)]
+    pub delete: bool,
+    /// Stdout output mode
+    #[arg(long, value_enum, default_value_t = ReadOutput::Json)]
+    pub output: ReadOutput,
+}
+
+#[derive(Debug, Clone, clap::Args)]
+pub struct SyncServeCommand {
+    /// Sync project directory
+    pub dir: PathBuf,
+    /// Port to bind the localhost bridge server to
+    #[arg(long, default_value_t = 49321)]
+    pub port: u16,
 }
 
 #[derive(Debug, Subcommand)]

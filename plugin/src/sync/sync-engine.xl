@@ -1,0 +1,26 @@
+local BundlePlanner = require "@sync/bundle-planner"
+local Serializer = require "@sync/serializer"
+local TreeWalker = require "@sync/tree-walker"
+
+const DEFAULT_SYNC_CONFIG = freeze {
+    bundleThreshold = 20,
+    bundleGrouping = "className",
+    smallBundleBehavior = "explode",
+}
+
+function previewPull(root)
+    local children = root:GetChildren()
+    local plan = BundlePlanner.planChildren(children, DEFAULT_SYNC_CONFIG.bundleThreshold)
+    local nodes = TreeWalker.walkInstanceTree(root)
+
+    return {
+        root = Serializer.serializeInstance(root),
+        plan = plan,
+        nodes = nodes,
+    }
+end
+
+return {
+    DEFAULT_SYNC_CONFIG = DEFAULT_SYNC_CONFIG,
+    previewPull = previewPull,
+}

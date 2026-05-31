@@ -1,0 +1,26 @@
+local Panel = require "@ui/panel"
+local LocalhostClient = require "@bridge/localhost-client"
+local SyncEngine = require "@sync/sync-engine"
+
+const PluginState = freeze {
+    name = "rbxup Sync",
+    version = 1,
+}
+
+function createPluginState()
+    local panel = Panel.buildPanelState()
+    local bridge = LocalhostClient.ping({
+        source = "plugin",
+    })
+
+    return {
+        plugin = PluginState,
+        panel = panel,
+        bridge = bridge,
+        syncConfig = SyncEngine.DEFAULT_SYNC_CONFIG,
+    }
+end
+
+return {
+    createPluginState = createPluginState,
+}

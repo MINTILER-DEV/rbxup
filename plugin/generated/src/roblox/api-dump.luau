@@ -1,0 +1,5 @@
+local SampleApiDump = table.freeze({Part = {properties = {"Name", "CFrame", "Size", "Anchored", "Color", "Material"}}, MeshPart = {properties = {"Name", "CFrame", "Size", "Anchored", "Color", "Material"}}, Model = {properties = {"Name", "WorldPivot", "PrimaryPart"}}, Script = {properties = {"Name", "Enabled", "RunContext", "Source"}}, ModuleScript = {properties = {"Name", "Source"}}})
+function getClassInfo(className)
+    return SampleApiDump[className]
+end
+return {SampleApiDump = SampleApiDump, getClassInfo = getClassInfo}

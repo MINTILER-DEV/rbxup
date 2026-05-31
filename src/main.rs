@@ -11,6 +11,9 @@ mod output;
 mod project;
 mod roblox;
 mod status;
+mod sync;
+mod sync_bundle;
+mod sync_format;
 mod update;
 mod upload;
 

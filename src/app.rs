@@ -12,6 +12,7 @@ use crate::error::AppResult;
 use crate::output::print_json;
 use crate::project::init_project_config;
 use crate::status::run_status;
+use crate::sync::run_sync;
 use crate::update::run_update;
 use crate::upload::run_upload;
 
@@ -37,6 +38,7 @@ pub async fn run(cli: Cli) -> AppResult<()> {
         Commands::Quotas(args) => run_quotas(args, &config_manager).await,
         Commands::Rollback(args) => run_rollback(args, &config_manager).await,
         Commands::Status(args) => run_status(args, &config_manager).await,
+        Commands::Sync { command } => run_sync(command).await,
         Commands::Update(args) => run_update(args, &config_manager).await,
         Commands::Versions(args) => run_versions(args, &config_manager).await,
         Commands::Upload(args) => run_upload(args, &config_manager).await,

@@ -1,0 +1,287 @@
+{
+  "version": 1,
+  "sourceFile": "D:/GitHub/Repositories/rbxup/plugin/src/roblox/type-codec.xl",
+  "emittedFile": "D:/GitHub/Repositories/rbxup/plugin/generated/src/roblox/type-codec.luau",
+  "mappings": [
+    {
+      "emittedLine": 1,
+      "sourceLine": 1,
+      "sourceCol": 1
+    },
+    {
+      "emittedLine": 2,
+      "sourceLine": 1,
+      "sourceCol": 1
+    },
+    {
+      "emittedLine": 3,
+      "sourceLine": 1,
+      "sourceCol": 1
+    },
+    {
+      "emittedLine": 4,
+      "sourceLine": 1,
+      "sourceCol": 1
+    },
+    {
+      "emittedLine": 5,
+      "sourceLine": 1,
+      "sourceCol": 1
+    },
+    {
+      "emittedLine": 6,
+      "sourceLine": 1,
+      "sourceCol": 1
+    },
+    {
+      "emittedLine": 7,
+      "sourceLine": 1,
+      "sourceCol": 1
+    },
+    {
+      "emittedLine": 8,
+      "sourceLine": 1,
+      "sourceCol": 1
+    },
+    {
+      "emittedLine": 9,
+      "sourceLine": 1,
+      "sourceCol": 1
+    },
+    {
+      "emittedLine": 10,
+      "sourceLine": 1,
+      "sourceCol": 1
+    },
+    {
+      "emittedLine": 11,
+      "sourceLine": 1,
+      "sourceCol": 1
+    },
+    {
+      "emittedLine": 12,
+      "sourceLine": 1,
+      "sourceCol": 1
+    },
+    {
+      "emittedLine": 13,
+      "sourceLine": 1,
+      "sourceCol": 1
+    },
+    {
+      "emittedLine": 14,
+      "sourceLine": 1,
+      "sourceCol": 1
+    },
+    {
+      "emittedLine": 15,
+      "sourceLine": 1,
+      "sourceCol": 1
+    },
+    {
+      "emittedLine": 16,
+      "sourceLine": 1,
+      "sourceCol": 1
+    },
+    {
+      "emittedLine": 17,
+      "sourceLine": 1,
+      "sourceCol": 1
+    },
+    {
+      "emittedLine": 18,
+      "sourceLine": 18,
+      "sourceCol": 1
+    },
+    {
+      "emittedLine": 19,
+      "sourceLine": 19,
+      "sourceCol": 1
+    },
+    {
+      "emittedLine": 20,
+      "sourceLine": 21,
+      "sourceCol": 1
+    },
+    {
+      "emittedLine": 21,
+      "sourceLine": 21,
+      "sourceCol": 1
+    },
+    {
+      "emittedLine": 22,
+      "sourceLine": 23,
+      "sourceCol": 1
+    },
+    {
+      "emittedLine": 23,
+      "sourceLine": 23,
+      "sourceCol": 1
+    },
+    {
+      "emittedLine": 24,
+      "sourceLine": 25,
+      "sourceCol": 1
+    },
+    {
+      "emittedLine": 25,
+      "sourceLine": 25,
+      "sourceCol": 1
+    },
+    {
+      "emittedLine": 26,
+      "sourceLine": 27,
+      "sourceCol": 1
+    },
+    {
+      "emittedLine": 27,
+      "sourceLine": 28,
+      "sourceCol": 1
+    },
+    {
+      "emittedLine": 28,
+      "sourceLine": 28,
+      "sourceCol": 1
+    },
+    {
+      "emittedLine": 29,
+      "sourceLine": 33,
+      "sourceCol": 1
+    },
+    {
+      "emittedLine": 30,
+      "sourceLine": 33,
+      "sourceCol": 1
+    },
+    {
+      "emittedLine": 31,
+      "sourceLine": 35,
+      "sourceCol": 1
+    },
+    {
+      "emittedLine": 32,
+      "sourceLine": 35,
+      "sourceCol": 1
+    },
+    {
+      "emittedLine": 33,
+      "sourceLine": 41,
+      "sourceCol": 1
+    },
+    {
+      "emittedLine": 34,
+      "sourceLine": 41,
+      "sourceCol": 1
+    },
+    {
+      "emittedLine": 35,
+      "sourceLine": 41,
+      "sourceCol": 1
+    },
+    {
+      "emittedLine": 36,
+      "sourceLine": 45,
+      "sourceCol": 1
+    },
+    {
+      "emittedLine": 37,
+      "sourceLine": 46,
+      "sourceCol": 1
+    },
+    {
+      "emittedLine": 38,
+      "sourceLine": 47,
+      "sourceCol": 1
+    },
+    {
+      "emittedLine": 39,
+      "sourceLine": 48,
+      "sourceCol": 1
+    },
+    {
+      "emittedLine": 40,
+      "sourceLine": 50,
+      "sourceCol": 1
+    },
+    {
+      "emittedLine": 41,
+      "sourceLine": 50,
+      "sourceCol": 1
+    },
+    {
+      "emittedLine": 42,
+      "sourceLine": 52,
+      "sourceCol": 1
+    },
+    {
+      "emittedLine": 43,
+      "sourceLine": 52,
+      "sourceCol": 1
+    },
+    {
+      "emittedLine": 44,
+      "sourceLine": 54,
+      "sourceCol": 1
+    },
+    {
+      "emittedLine": 45,
+      "sourceLine": 54,
+      "sourceCol": 1
+    },
+    {
+      "emittedLine": 46,
+      "sourceLine": 56,
+      "sourceCol": 1
+    },
+    {
+      "emittedLine": 47,
+      "sourceLine": 56,
+      "sourceCol": 1
+    },
+    {
+      "emittedLine": 48,
+      "sourceLine": 58,
+      "sourceCol": 1
+    },
+    {
+      "emittedLine": 49,
+      "sourceLine": 58,
+      "sourceCol": 1
+    },
+    {
+      "emittedLine": 50,
+      "sourceLine": 60,
+      "sourceCol": 1
+    },
+    {
+      "emittedLine": 51,
+      "sourceLine": 61,
+      "sourceCol": 1
+    },
+    {
+      "emittedLine": 52,
+      "sourceLine": 61,
+      "sourceCol": 1
+    },
+    {
+      "emittedLine": 53,
+      "sourceLine": 63,
+      "sourceCol": 1
+    },
+    {
+      "emittedLine": 54,
+      "sourceLine": 63,
+      "sourceCol": 1
+    },
+    {
+      "emittedLine": 55,
+      "sourceLine": 63,
+      "sourceCol": 1
+    },
+    {
+      "emittedLine": 56,
+      "sourceLine": 67,
+      "sourceCol": 1
+    }
+  ]
+}

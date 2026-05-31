@@ -1,0 +1,58 @@
+const BundleableClassNames = table.freeze({
+    Part = true,
+    MeshPart = true,
+    UnionOperation = true,
+    Attachment = true,
+    Decal = true,
+    Texture = true,
+    WeldConstraint = true,
+    HingeConstraint = true,
+    BallSocketConstraint = true,
+    RodConstraint = true,
+    RopeConstraint = true,
+    SpringConstraint = true,
+})
+
+const MainProperties = table.freeze({
+    BasePart = table.freeze({
+        "CFrame",
+        "Size",
+        "Anchored",
+        "CanCollide",
+        "Color",
+        "Material",
+        "Transparency",
+    }),
+    Model = table.freeze({
+        "WorldPivot",
+        "PrimaryPart",
+    }),
+    Script = table.freeze({
+        "Enabled",
+        "RunContext",
+        "Source",
+    }),
+    LocalScript = table.freeze({
+        "Enabled",
+        "Source",
+    }),
+    ModuleScript = table.freeze({
+        "Source",
+    }),
+    GuiObject = table.freeze({
+        "Size",
+        "Position",
+        "AnchorPoint",
+        "BackgroundTransparency",
+        "Visible",
+        "ZIndex",
+    }),
+    ValueBase = table.freeze({
+        "Value",
+    }),
+})
+
+return {
+    BundleableClassNames = BundleableClassNames,
+    MainProperties = MainProperties,
+}

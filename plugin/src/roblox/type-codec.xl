@@ -1,0 +1,71 @@
+enum EncodedType
+    Primitive
+    Vector2
+    Vector3
+    CFrame
+    Color3
+    UDim
+    UDim2
+    Enum
+    BrickColor
+    NumberRange
+    NumberSequence
+    ColorSequence
+    PhysicalProperties
+    Ref
+end
+
+function encodeValue(value)
+    local valueType = typeof(value)
+
+    switch valueType
+        case "Vector2"
+            return { ["type"] = EncodedType.Vector2, value = { value.X, value.Y } }
+        case "Vector3"
+            return { ["type"] = EncodedType.Vector3, value = { value.X, value.Y, value.Z } }
+        case "CFrame"
+            local components = { value:GetComponents() }
+            return {
+                ["type"] = EncodedType.CFrame,
+                value = components,
+            }
+        case "Color3"
+            return { ["type"] = EncodedType.Color3, value = { value.R, value.G, value.B } }
+        case "EnumItem"
+            return {
+                ["type"] = EncodedType.Enum,
+                ["enum"] = tostring(value.EnumType),
+                value = value.Name,
+            }
+        default
+            return { ["type"] = EncodedType.Primitive, value = value }
+    end
+end
+
+function decodeValue(encoded)
+    local kind = encoded["type"]
+    local value = encoded.value
+    local enumName = encoded["enum"]
+
+    switch kind
+        case EncodedType.Vector2
+            return Vector2.new(value[1], value[2])
+        case EncodedType.Vector3
+            return Vector3.new(value[1], value[2], value[3])
+        case EncodedType.CFrame
+            return CFrame.new(unpack(value))
+        case EncodedType.Color3
+            return Color3.new(value[1], value[2], value[3])
+        case EncodedType.Enum
+            local enumType = Enum[enumName]
+            return enumType[value]
+        default
+            return value
+    end
+end
+
+return {
+    EncodedType = EncodedType,
+    encodeValue = encodeValue,
+    decodeValue = decodeValue,
+}

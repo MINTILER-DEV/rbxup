@@ -1,0 +1,28 @@
+local HttpService = game:GetService("HttpService")
+
+const ATTRIBUTE_NAME = "rbxup_id"
+
+function isMissing(value)
+    return value == nil or value == ""
+end
+
+function ensureStableId(instance)
+    local existing = instance:GetAttribute(ATTRIBUTE_NAME)
+    if not isMissing(existing) then
+        return existing, false
+    end
+
+    local generated = HttpService:GenerateGUID(false)
+    instance:SetAttribute(ATTRIBUTE_NAME, generated)
+    return generated, true
+end
+
+function getStableId(instance)
+    return instance:GetAttribute(ATTRIBUTE_NAME)
+end
+
+return {
+    ATTRIBUTE_NAME = ATTRIBUTE_NAME,
+    ensureStableId = ensureStableId,
+    getStableId = getStableId,
+}

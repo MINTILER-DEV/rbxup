@@ -1,0 +1,13 @@
+{
+  "include": ["src/**/*.xl"],
+  "outDir": "generated",
+  "baseDir": "src",
+  "target": "roblox",
+  "taskAdapter": "roblox",
+  "paths": {
+    "@sync": "./src/sync",
+    "@roblox": "./src/roblox",
+    "@bridge": "./src/bridge",
+    "@ui": "./src/ui"
+  }
+}

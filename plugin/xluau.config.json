@@ -4,6 +4,13 @@
   "baseDir": "src",
   "target": "roblox",
   "taskAdapter": "roblox",
+  "comptimeHttp": {
+    "enabled": true,
+    "allow": [
+      "https://raw.githubusercontent.com/MaximumADHD/Roblox-Client-Tracker/"
+    ],
+    "timeoutMs": 15000
+  },
   "paths": {
     "@sync": "./src/sync",
     "@roblox": "./src/roblox",

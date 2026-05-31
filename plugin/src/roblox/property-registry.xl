@@ -1,10 +1,45 @@
 local ApiDump = require "@roblox/api-dump"
 local Defaults = require "@roblox/defaults"
 
+function appendMissingProperties(target, seen, properties)
+    if properties == nil then
+        return
+    end
+
+    for propertyName, enabled in properties do
+        if enabled == true and seen[propertyName] ~= true then
+            seen[propertyName] = true
+            target[#target + 1] = propertyName
+        end
+    end
+end
+
 function getKnownProperties(className)
-    local classInfo = ApiDump.getClassInfo(className)
-    if classInfo ~= nil then
-        return classInfo.properties
+    local merged = {}
+    local seenProperties = {}
+    local visitedClasses = {}
+    local currentClassName = className
+
+    while currentClassName ~= nil and visitedClasses[currentClassName] ~= true do
+        visitedClasses[currentClassName] = true
+
+        local classInfo = ApiDump.getClassInfo(currentClassName)
+        if classInfo == nil then
+            break
+        end
+
+        appendMissingProperties(merged, seenProperties, classInfo.properties)
+
+        if classInfo.superclass == "<<<ROOT>>>" then
+            break
+        end
+
+        currentClassName = classInfo.superclass
+    end
+
+    if #merged > 0 then
+        table.sort(merged)
+        return merged
     end
 
     return Defaults.MainProperties[className] ?? {}

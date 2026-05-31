@@ -1,26 +1,112 @@
-const SampleApiDump = table.freeze({
-    Part = {
-        properties = { "Name", "CFrame", "Size", "Anchored", "Color", "Material" },
-    },
-    MeshPart = {
-        properties = { "Name", "CFrame", "Size", "Anchored", "Color", "Material" },
-    },
-    Model = {
-        properties = { "Name", "WorldPivot", "PrimaryPart" },
-    },
-    Script = {
-        properties = { "Name", "Enabled", "RunContext", "Source" },
-    },
-    ModuleScript = {
-        properties = { "Name", "Source" },
-    },
+comptime const ApiDumpUrl = "https://raw.githubusercontent.com/MaximumADHD/Roblox-Client-Tracker/refs/heads/roblox/API-Dump.json"
+
+comptime const RawApiDump = httpJson(ApiDumpUrl)
+comptime const TrackedClasses = freeze({
+    Object = true,
+    Instance = true,
+    PVInstance = true,
+    Model = true,
+    BasePart = true,
+    FormFactorPart = true,
+    TriangleMeshPart = true,
+    PartOperation = true,
+    Part = true,
+    MeshPart = true,
+    UnionOperation = true,
+    Attachment = true,
+    FaceInstance = true,
+    Decal = true,
+    Texture = true,
+    Constraint = true,
+    WeldConstraint = true,
+    HingeConstraint = true,
+    BallSocketConstraint = true,
+    RodConstraint = true,
+    RopeConstraint = true,
+    SpringConstraint = true,
+    LuaSourceContainer = true,
+    BaseScript = true,
+    Script = true,
+    LocalScript = true,
+    ModuleScript = true,
+    GuiBase = true,
+    GuiBase2d = true,
+    GuiObject = true,
+    GuiLabel = true,
+    GuiButton = true,
+    Frame = true,
+    TextLabel = true,
+    TextButton = true,
+    ImageLabel = true,
+    ImageButton = true,
+    ValueBase = true,
+    StringValue = true,
+    IntValue = true,
+    NumberValue = true,
+    BoolValue = true,
+    ObjectValue = true,
+    Vector3Value = true,
+    Color3Value = true,
+    CFrameValue = true,
+    Folder = true,
 })
 
+comptime function shouldIncludeProperty(member)
+    if member.MemberType ~= "Property" then
+        return false
+    end
+
+    local serialization = member.Serialization
+    if serialization == nil then
+        return true
+    end
+
+    return serialization.CanLoad ~= false or serialization.CanSave ~= false
+end
+
+comptime function shouldTrackClass(className)
+    return TrackedClasses[className] == true
+end
+
+comptime function buildPropertySet(members)
+    local properties = {}
+
+    if members == nil then
+        return freeze(properties)
+    end
+
+    for _, member in members do
+        if shouldIncludeProperty(member) then
+            properties[member.Name] = true
+        end
+    end
+
+    return freeze(properties)
+end
+
+comptime function buildClassInfoByName(classes)
+    local classInfoByName = {}
+
+    for _, classInfo in classes do
+        if shouldTrackClass(classInfo.Name) then
+            classInfoByName[classInfo.Name] = freeze({
+                superclass = classInfo.Superclass,
+                properties = buildPropertySet(classInfo.Members),
+            })
+        end
+    end
+
+    return freeze(classInfoByName)
+end
+
+const ClassInfoByName = comptime buildClassInfoByName(RawApiDump.Classes)
+
 function getClassInfo(className)
-    return SampleApiDump[className]
+    return ClassInfoByName[className]
 end
 
 return {
-    SampleApiDump = SampleApiDump,
+    ApiDumpUrl = ApiDumpUrl,
+    ClassInfoByName = ClassInfoByName,
     getClassInfo = getClassInfo,
 }

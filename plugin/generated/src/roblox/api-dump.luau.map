@@ -5,27 +5,27 @@
   "mappings": [
     {
       "emittedLine": 1,
-      "sourceLine": 1,
+      "sourceLine": 102,
       "sourceCol": 1
     },
     {
       "emittedLine": 2,
-      "sourceLine": 19,
+      "sourceLine": 104,
       "sourceCol": 1
     },
     {
       "emittedLine": 3,
-      "sourceLine": 20,
+      "sourceLine": 105,
       "sourceCol": 1
     },
     {
       "emittedLine": 4,
-      "sourceLine": 20,
+      "sourceLine": 105,
       "sourceCol": 1
     },
     {
       "emittedLine": 5,
-      "sourceLine": 23,
+      "sourceLine": 108,
       "sourceCol": 1
     }
   ]

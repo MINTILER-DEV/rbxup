@@ -1,0 +1,32 @@
+<roblox xmlns:xmime="http://www.w3.org/2005/05/xmlmime" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://www.roblox.com/roblox.xsd" version="4">
+    <Item class="ModuleScript" referent="RBX0">
+        <Properties>
+            <string name="Name">serializer</string>
+            <ProtectedString name="Source">local StableIds = require(script.Parent.Parent.roblox.stable-ids)
+local TypeCodec = require(script.Parent.Parent.roblox.type-codec)
+
+function serializeInstance(instance)
+    local id = StableIds.getStableId(instance)
+    local encodedName = TypeCodec.encodeValue(instance.Name)
+
+    return {
+        format = &quot;xup&quot;,
+        version = 1,
+        id = id,
+        className = instance.ClassName,
+        name = instance.Name,
+        properties = {
+            Name = encodedName,
+        },
+        attributes = {},
+        tags = {},
+    }
+end
+
+return {
+    serializeInstance = serializeInstance,
+}
+</ProtectedString>
+        </Properties>
+    </Item>
+</roblox>

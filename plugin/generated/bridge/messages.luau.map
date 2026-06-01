@@ -1,7 +1,7 @@
 {
   "version": 1,
   "sourceFile": "D:/GitHub/Repositories/rbxup/plugin/src/bridge/messages.xl",
-  "emittedFile": "D:/GitHub/Repositories/rbxup/plugin/generated/src/bridge/messages.luau",
+  "emittedFile": "D:/GitHub/Repositories/rbxup/plugin/generated/bridge/messages.luau",
   "mappings": [
     {
       "emittedLine": 1,

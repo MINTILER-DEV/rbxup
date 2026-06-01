@@ -1,0 +1,24 @@
+<roblox xmlns:xmime="http://www.w3.org/2005/05/xmlmime" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://www.roblox.com/roblox.xsd" version="4">
+    <Item class="ModuleScript" referent="RBX0">
+        <Properties>
+            <string name="Name">deserializer</string>
+            <ProtectedString name="Source">local TypeCodec = require(script.Parent.Parent.roblox.type-codec)
+
+function applyProperties(instance, properties)
+    for propertyName, encoded in properties do
+        local ok, decoded = pcall(TypeCodec.decodeValue, encoded)
+        if ok then
+            pcall(function()
+                instance[propertyName] = decoded
+            end)
+        end
+    end
+end
+
+return {
+    applyProperties = applyProperties,
+}
+</ProtectedString>
+        </Properties>
+    </Item>
+</roblox>

@@ -1,0 +1,506 @@
+<roblox xmlns:xmime="http://www.w3.org/2005/05/xmlmime" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://www.roblox.com/roblox.xsd" version="4">
+    <Item class="Folder" referent="RBX0">
+        <Properties>
+            <string name="Name">rbxup</string>
+        </Properties>
+        <Item class="Folder" referent="RBX1">
+            <Properties>
+                <string name="Name">bridge</string>
+            </Properties>
+            <Item class="ModuleScript" referent="RBX2">
+                <Properties>
+                    <string name="Name">localhost-client</string>
+                    <ProtectedString name="Source">local Messages = require(script.Parent.Parent.bridge.messages)
+local DEFAULT_HOST = &quot;http://127.0.0.1:49321&quot;
+function buildRequest(command, payload)
+    return {url = DEFAULT_HOST, message = Messages.makeMessage(command, payload)}
+end
+function ping(payload)
+    return buildRequest(Messages.SyncCommand.Doctor, payload)
+end
+return {DEFAULT_HOST = DEFAULT_HOST, buildRequest = buildRequest, ping = ping}
+</ProtectedString>
+                </Properties>
+            </Item>
+            <Item class="ModuleScript" referent="RBX3">
+                <Properties>
+                    <string name="Name">messages</string>
+                    <ProtectedString name="Source">local SyncCommand = {Pull = &quot;pull&quot;, Push = &quot;push&quot;, Diff = &quot;diff&quot;, Doctor = &quot;doctor&quot;}
+function makeMessage(command, payload)
+    return {kind = &quot;sync-message&quot;, version = 1, command = command, payload = (if payload ~= nil then payload else {})}
+end
+return {SyncCommand = table.freeze(SyncCommand), makeMessage = makeMessage}
+</ProtectedString>
+                </Properties>
+            </Item>
+        </Item>
+        <Item class="ModuleScript" referent="RBX4">
+            <Properties>
+                <string name="Name">main</string>
+                <ProtectedString name="Source">local Panel = require(script.Parent.ui.panel)
+local LocalhostClient = require(script.Parent.bridge.localhost-client)
+local SyncEngine = require(script.Parent.sync.sync-engine)
+local PluginState = table.freeze({name = &quot;rbxup Sync&quot;, version = 1})
+function createPluginState()
+    local panel = Panel.buildPanelState()
+    local bridge = LocalhostClient.ping({source = &quot;plugin&quot;})
+    return {plugin = PluginState, panel = panel, bridge = bridge, syncConfig = SyncEngine.DEFAULT_SYNC_CONFIG}
+end
+return {createPluginState = createPluginState}
+</ProtectedString>
+            </Properties>
+        </Item>
+        <Item class="Folder" referent="RBX5">
+            <Properties>
+                <string name="Name">roblox</string>
+            </Properties>
+            <Item class="ModuleScript" referent="RBX6">
+                <Properties>
+                    <string name="Name">api-dump</string>
+                    <ProtectedString name="Source">local HttpService = game:GetService(&quot;HttpService&quot;)
+local ApiDumpUrl = &quot;https://raw.githubusercontent.com/MaximumADHD/Roblox-Client-Tracker/refs/heads/roblox/API-Dump.json&quot;
+local TrackedClasses = table.freeze({Object = true, Instance = true, PVInstance = true, Model = true, BasePart = true, FormFactorPart = true, TriangleMeshPart = true, PartOperation = true, Part = true, MeshPart = true, UnionOperation = true, Attachment = true, FaceInstance = true, Decal = true, Texture = true, Constraint = true, WeldConstraint = true, HingeConstraint = true, BallSocketConstraint = true, RodConstraint = true, RopeConstraint = true, SpringConstraint = true, LuaSourceContainer = true, BaseScript = true, Script = true, LocalScript = true, ModuleScript = true, GuiBase = true, GuiBase2d = true, GuiObject = true, GuiLabel = true, GuiButton = true, Frame = true, TextLabel = true, TextButton = true, ImageLabel = true, ImageButton = true, ValueBase = true, StringValue = true, IntValue = true, NumberValue = true, BoolValue = true, ObjectValue = true, Vector3Value = true, Color3Value = true, CFrameValue = true, Folder = true})
+local cachedClassInfoByName = nil
+local cachedLoadError = nil
+function shouldIncludeProperty(member)
+    local _cond0 = (member.MemberType ~= &quot;Property&quot;)
+    if _cond0 then
+        return false
+    end
+    local serialization = member.Serialization
+    local _cond1 = (serialization == nil)
+    if _cond1 then
+        return true
+    end
+    local _lhs2 = (serialization.CanLoad ~= false)
+    return (_lhs2 or (serialization.CanSave ~= false))
+end
+function shouldTrackClass(className)
+    return (TrackedClasses[className] == true)
+end
+function buildPropertySet(members)
+    local properties = {}
+    local _cond3 = (members == nil)
+    if _cond3 then
+        return table.freeze(properties)
+    end
+    for _, member in members do
+        local _cond4 = shouldIncludeProperty(member)
+        if _cond4 then
+            local _idx5 = member.Name
+            properties[_idx5] = true
+        end
+    end
+    return table.freeze(properties)
+end
+function buildClassInfoByName(classes)
+    local classInfoByName = {}
+    for _, classInfo in classes do
+        local _cond6 = shouldTrackClass(classInfo.Name)
+        if _cond6 then
+            local _idx7 = classInfo.Name
+            classInfoByName[_idx7] = table.freeze({superclass = classInfo.Superclass, properties = buildPropertySet(classInfo.Members)})
+        end
+    end
+    return table.freeze(classInfoByName)
+end
+function loadClassInfoByName()
+    local _cond8 = (cachedClassInfoByName ~= nil)
+    if _cond8 then
+        return cachedClassInfoByName
+    end
+    local _cond9 = (cachedLoadError ~= nil)
+    if _cond9 then
+        return nil
+    end
+    local response = nil
+    local okResponse = pcall(function()
+    response = HttpService:GetAsync(ApiDumpUrl)
+end)
+    local _cond10 = (not okResponse)
+    if _cond10 then
+        cachedLoadError = response
+        return nil
+    end
+    local decoded = nil
+    local okDecode = pcall(function()
+    decoded = HttpService:JSONDecode(response)
+end)
+    local _cond11 = (not okDecode)
+    if _cond11 then
+        cachedLoadError = decoded
+        return nil
+    end
+    local _lhs12 = decoded.Classes
+    cachedClassInfoByName = buildClassInfoByName((if _lhs12 ~= nil then _lhs12 else {}))
+    return cachedClassInfoByName
+end
+function getClassInfo(className)
+    local classInfoByName = loadClassInfoByName()
+    local _cond13 = (classInfoByName == nil)
+    if _cond13 then
+        return nil
+    end
+    return classInfoByName[className]
+end
+function getLoadError()
+    return cachedLoadError
+end
+function refresh()
+    cachedClassInfoByName = nil
+    cachedLoadError = nil
+    return loadClassInfoByName()
+end
+return {ApiDumpUrl = ApiDumpUrl, getClassInfo = getClassInfo, getLoadError = getLoadError, refresh = refresh}
+</ProtectedString>
+                </Properties>
+            </Item>
+            <Item class="ModuleScript" referent="RBX7">
+                <Properties>
+                    <string name="Name">defaults</string>
+                    <ProtectedString name="Source">local BundleableClassNames = table.freeze({Part = true, MeshPart = true, UnionOperation = true, Attachment = true, Decal = true, Texture = true, WeldConstraint = true, HingeConstraint = true, BallSocketConstraint = true, RodConstraint = true, RopeConstraint = true, SpringConstraint = true})
+local MainProperties = table.freeze({BasePart = table.freeze({&quot;CFrame&quot;, &quot;Size&quot;, &quot;Anchored&quot;, &quot;CanCollide&quot;, &quot;Color&quot;, &quot;Material&quot;, &quot;Transparency&quot;}), Model = table.freeze({&quot;WorldPivot&quot;, &quot;PrimaryPart&quot;}), Script = table.freeze({&quot;Enabled&quot;, &quot;RunContext&quot;, &quot;Source&quot;}), LocalScript = table.freeze({&quot;Enabled&quot;, &quot;Source&quot;}), ModuleScript = table.freeze({&quot;Source&quot;}), GuiObject = table.freeze({&quot;Size&quot;, &quot;Position&quot;, &quot;AnchorPoint&quot;, &quot;BackgroundTransparency&quot;, &quot;Visible&quot;, &quot;ZIndex&quot;}), ValueBase = table.freeze({&quot;Value&quot;})})
+return {BundleableClassNames = BundleableClassNames, MainProperties = MainProperties}
+</ProtectedString>
+                </Properties>
+            </Item>
+            <Item class="ModuleScript" referent="RBX8">
+                <Properties>
+                    <string name="Name">property-registry</string>
+                    <ProtectedString name="Source">local ApiDump = require(script.Parent.Parent.roblox.api-dump)
+local Defaults = require(script.Parent.Parent.roblox.defaults)
+function appendMissingProperties(target, seen, properties)
+    local _cond0 = (properties == nil)
+    if _cond0 then
+        return
+    end
+    for propertyName, enabled in properties do
+        local _lhs1 = (enabled == true)
+        local _cond2 = (_lhs1 and (seen[propertyName] ~= true))
+        if _cond2 then
+            seen[propertyName] = true
+            local _idx3 = ((#target) + 1)
+            target[_idx3] = propertyName
+        end
+    end
+end
+function getKnownProperties(className)
+    local merged = {}
+    local seenProperties = {}
+    local visitedClasses = {}
+    local currentClassName = className
+    while true do
+        local _lhs4 = (currentClassName ~= nil)
+        local _cond5 = (_lhs4 and (visitedClasses[currentClassName] ~= true))
+        local _while6 = _cond5
+        if not _while6 then
+            break
+        end
+        visitedClasses[currentClassName] = true
+        local classInfo = ApiDump.getClassInfo(currentClassName)
+        local _cond7 = (classInfo == nil)
+        if _cond7 then
+            break
+        end
+        appendMissingProperties(merged, seenProperties, classInfo.properties)
+        local _cond8 = (classInfo.superclass == &quot;&lt;&lt;&lt;ROOT&gt;&gt;&gt;&quot;)
+        if _cond8 then
+            break
+        end
+        currentClassName = classInfo.superclass
+    end
+    local _cond9 = ((#merged) &gt; 0)
+    if _cond9 then
+        table.sort(merged)
+        return merged
+    end
+    local _lhs10 = Defaults.MainProperties[className]
+    return (if _lhs10 ~= nil then _lhs10 else {})
+end
+return {getKnownProperties = getKnownProperties}
+</ProtectedString>
+                </Properties>
+            </Item>
+            <Item class="ModuleScript" referent="RBX9">
+                <Properties>
+                    <string name="Name">stable-ids</string>
+                    <ProtectedString name="Source">local HttpService = game:GetService(&quot;HttpService&quot;)
+local ATTRIBUTE_NAME = &quot;rbxup_id&quot;
+function isMissing(value)
+    local _lhs0 = (value == nil)
+    return (_lhs0 or (value == &quot;&quot;))
+end
+function ensureStableId(instance)
+    local existing = instance:GetAttribute(ATTRIBUTE_NAME)
+    local _cond1 = (not isMissing(existing))
+    if _cond1 then
+        return existing, false
+    end
+    local generated = HttpService:GenerateGUID(false)
+    instance:SetAttribute(ATTRIBUTE_NAME, generated)
+    return generated, true
+end
+function getStableId(instance)
+    return instance:GetAttribute(ATTRIBUTE_NAME)
+end
+return {ATTRIBUTE_NAME = ATTRIBUTE_NAME, ensureStableId = ensureStableId, getStableId = getStableId}
+</ProtectedString>
+                </Properties>
+            </Item>
+            <Item class="ModuleScript" referent="RBX10">
+                <Properties>
+                    <string name="Name">type-codec</string>
+                    <ProtectedString name="Source">type EncodedType = &quot;Primitive&quot; | &quot;Vector2&quot; | &quot;Vector3&quot; | &quot;CFrame&quot; | &quot;Color3&quot; | &quot;UDim&quot; | &quot;UDim2&quot; | &quot;Enum&quot; | &quot;BrickColor&quot; | &quot;NumberRange&quot; | &quot;NumberSequence&quot; | &quot;ColorSequence&quot; | &quot;PhysicalProperties&quot; | &quot;Ref&quot;
+local EncodedType = table.freeze({
+    Primitive = &quot;Primitive&quot; :: EncodedType,
+    Vector2 = &quot;Vector2&quot; :: EncodedType,
+    Vector3 = &quot;Vector3&quot; :: EncodedType,
+    CFrame = &quot;CFrame&quot; :: EncodedType,
+    Color3 = &quot;Color3&quot; :: EncodedType,
+    UDim = &quot;UDim&quot; :: EncodedType,
+    UDim2 = &quot;UDim2&quot; :: EncodedType,
+    Enum = &quot;Enum&quot; :: EncodedType,
+    BrickColor = &quot;BrickColor&quot; :: EncodedType,
+    NumberRange = &quot;NumberRange&quot; :: EncodedType,
+    NumberSequence = &quot;NumberSequence&quot; :: EncodedType,
+    ColorSequence = &quot;ColorSequence&quot; :: EncodedType,
+    PhysicalProperties = &quot;PhysicalProperties&quot; :: EncodedType,
+    Ref = &quot;Ref&quot; :: EncodedType,
+})
+function encodeValue(value)
+    local valueType = typeof(value)
+    local _sw0 = valueType
+    if _sw0 == &quot;Vector2&quot; then
+        return {[&quot;type&quot;] = EncodedType.Vector2, value = {value.X, value.Y}}
+    elseif _sw0 == &quot;Vector3&quot; then
+        return {[&quot;type&quot;] = EncodedType.Vector3, value = {value.X, value.Y, value.Z}}
+    elseif _sw0 == &quot;CFrame&quot; then
+        local components = {value:GetComponents()}
+        return {[&quot;type&quot;] = EncodedType.CFrame, value = components}
+    elseif _sw0 == &quot;Color3&quot; then
+        return {[&quot;type&quot;] = EncodedType.Color3, value = {value.R, value.G, value.B}}
+    elseif _sw0 == &quot;EnumItem&quot; then
+        return {[&quot;type&quot;] = EncodedType.Enum, [&quot;enum&quot;] = tostring(value.EnumType), value = value.Name}
+    else
+        return {[&quot;type&quot;] = EncodedType.Primitive, value = value}
+    end
+end
+function decodeValue(encoded)
+    local kind = encoded[&quot;type&quot;]
+    local value = encoded.value
+    local enumName = encoded[&quot;enum&quot;]
+    local _sw1 = kind
+    if _sw1 == EncodedType.Vector2 then
+        return Vector2.new(value[1], value[2])
+    elseif _sw1 == EncodedType.Vector3 then
+        return Vector3.new(value[1], value[2], value[3])
+    elseif _sw1 == EncodedType.CFrame then
+        return CFrame.new(unpack(value))
+    elseif _sw1 == EncodedType.Color3 then
+        return Color3.new(value[1], value[2], value[3])
+    elseif _sw1 == EncodedType.Enum then
+        local enumType = Enum[enumName]
+        return enumType[value]
+    else
+        return value
+    end
+end
+return {EncodedType = EncodedType, encodeValue = encodeValue, decodeValue = decodeValue}
+</ProtectedString>
+                </Properties>
+            </Item>
+        </Item>
+        <Item class="Folder" referent="RBX11">
+            <Properties>
+                <string name="Name">sync</string>
+            </Properties>
+            <Item class="ModuleScript" referent="RBX12">
+                <Properties>
+                    <string name="Name">bundle-planner</string>
+                    <ProtectedString name="Source">local Defaults = require(script.Parent.Parent.roblox.defaults)
+
+function classifyChild(child)
+    if Defaults.BundleableClassNames[child.ClassName] then
+        return &quot;bundleable&quot;
+    end
+
+    return &quot;readable&quot;
+end
+
+function planChildren(children, threshold)
+    local readable = {}
+    local groups = {}
+
+    for _, child in children do
+        local kind = classifyChild(child)
+        if kind == &quot;readable&quot; then
+            table.insert(readable, child)
+        else
+            local className = string.lower(child.ClassName)
+            local bucket = groups[className]
+            if bucket == nil then
+                bucket = {}
+                groups[className] = bucket
+            end
+            table.insert(bucket, child)
+        end
+    end
+
+    local bundled = {}
+    local exploded = {}
+
+    for className, bucket in groups do
+        if #bucket &gt;= threshold then
+            bundled[className] = bucket
+        else
+            for _, child in bucket do
+                table.insert(exploded, child)
+            end
+        end
+    end
+
+    return {
+        readable = readable,
+        bundled = bundled,
+        exploded = exploded,
+    }
+end
+
+return {
+    classifyChild = classifyChild,
+    planChildren = planChildren,
+}
+</ProtectedString>
+                </Properties>
+            </Item>
+            <Item class="ModuleScript" referent="RBX13">
+                <Properties>
+                    <string name="Name">deserializer</string>
+                    <ProtectedString name="Source">local TypeCodec = require(script.Parent.Parent.roblox.type-codec)
+
+function applyProperties(instance, properties)
+    for propertyName, encoded in properties do
+        local ok, decoded = pcall(TypeCodec.decodeValue, encoded)
+        if ok then
+            pcall(function()
+                instance[propertyName] = decoded
+            end)
+        end
+    end
+end
+
+return {
+    applyProperties = applyProperties,
+}
+</ProtectedString>
+                </Properties>
+            </Item>
+            <Item class="ModuleScript" referent="RBX14">
+                <Properties>
+                    <string name="Name">serializer</string>
+                    <ProtectedString name="Source">local StableIds = require(script.Parent.Parent.roblox.stable-ids)
+local TypeCodec = require(script.Parent.Parent.roblox.type-codec)
+
+function serializeInstance(instance)
+    local id = StableIds.getStableId(instance)
+    local encodedName = TypeCodec.encodeValue(instance.Name)
+
+    return {
+        format = &quot;xup&quot;,
+        version = 1,
+        id = id,
+        className = instance.ClassName,
+        name = instance.Name,
+        properties = {
+            Name = encodedName,
+        },
+        attributes = {},
+        tags = {},
+    }
+end
+
+return {
+    serializeInstance = serializeInstance,
+}
+</ProtectedString>
+                </Properties>
+            </Item>
+            <Item class="ModuleScript" referent="RBX15">
+                <Properties>
+                    <string name="Name">sync-engine</string>
+                    <ProtectedString name="Source">local BundlePlanner = require(script.Parent.Parent.sync.bundle-planner)
+local Serializer = require(script.Parent.Parent.sync.serializer)
+local TreeWalker = require(script.Parent.Parent.sync.tree-walker)
+local DEFAULT_SYNC_CONFIG = table.freeze({bundleThreshold = 20, bundleGrouping = &quot;className&quot;, smallBundleBehavior = &quot;explode&quot;})
+function previewPull(root)
+    local children = root:GetChildren()
+    local plan = BundlePlanner.planChildren(children, DEFAULT_SYNC_CONFIG.bundleThreshold)
+    local nodes = TreeWalker.walkInstanceTree(root)
+    return {root = Serializer.serializeInstance(root), plan = plan, nodes = nodes}
+end
+return {DEFAULT_SYNC_CONFIG = DEFAULT_SYNC_CONFIG, previewPull = previewPull}
+</ProtectedString>
+                </Properties>
+            </Item>
+            <Item class="ModuleScript" referent="RBX16">
+                <Properties>
+                    <string name="Name">tree-walker</string>
+                    <ProtectedString name="Source">local StableIds = require(script.Parent.Parent.roblox.stable-ids)
+
+function walkInstanceTree(root)
+    local results = {}
+
+    local function visit(node)
+        local id = StableIds.getStableId(node)
+        table.insert(results, {
+            id = id,
+            className = node.ClassName,
+            name = node.Name,
+            childCount = #node:GetChildren(),
+        })
+
+        for _, child in node:GetChildren() do
+            visit(child)
+        end
+    end
+
+    visit(root)
+    return results
+end
+
+return {
+    walkInstanceTree = walkInstanceTree,
+}
+</ProtectedString>
+                </Properties>
+            </Item>
+        </Item>
+        <Item class="Folder" referent="RBX17">
+            <Properties>
+                <string name="Name">ui</string>
+            </Properties>
+            <Item class="ModuleScript" referent="RBX18">
+                <Properties>
+                    <string name="Name">panel</string>
+                    <ProtectedString name="Source">function buildPanelState()
+    return {
+        title = &quot;rbxup Sync&quot;,
+        status = &quot;idle&quot;,
+        actions = {
+            &quot;Pull&quot;,
+            &quot;Push&quot;,
+            &quot;Diff&quot;,
+            &quot;Doctor&quot;,
+        },
+    }
+end
+
+return {
+    buildPanelState = buildPanelState,
+}
+</ProtectedString>
+                </Properties>
+            </Item>
+        </Item>
+    </Item>
+</roblox>

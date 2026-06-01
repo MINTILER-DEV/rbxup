@@ -1,7 +1,7 @@
 {
   "version": 1,
   "sourceFile": "D:/GitHub/Repositories/rbxup/plugin/src/roblox/defaults.xl",
-  "emittedFile": "D:/GitHub/Repositories/rbxup/plugin/generated/src/roblox/defaults.luau",
+  "emittedFile": "D:/GitHub/Repositories/rbxup/plugin/generated/roblox/defaults.luau",
   "mappings": [
     {
       "emittedLine": 1,

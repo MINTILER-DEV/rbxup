@@ -1,0 +1,64 @@
+<roblox xmlns:xmime="http://www.w3.org/2005/05/xmlmime" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://www.roblox.com/roblox.xsd" version="4">
+    <Item class="ModuleScript" referent="RBX0">
+        <Properties>
+            <string name="Name">type-codec</string>
+            <ProtectedString name="Source">type EncodedType = &quot;Primitive&quot; | &quot;Vector2&quot; | &quot;Vector3&quot; | &quot;CFrame&quot; | &quot;Color3&quot; | &quot;UDim&quot; | &quot;UDim2&quot; | &quot;Enum&quot; | &quot;BrickColor&quot; | &quot;NumberRange&quot; | &quot;NumberSequence&quot; | &quot;ColorSequence&quot; | &quot;PhysicalProperties&quot; | &quot;Ref&quot;
+local EncodedType = table.freeze({
+    Primitive = &quot;Primitive&quot; :: EncodedType,
+    Vector2 = &quot;Vector2&quot; :: EncodedType,
+    Vector3 = &quot;Vector3&quot; :: EncodedType,
+    CFrame = &quot;CFrame&quot; :: EncodedType,
+    Color3 = &quot;Color3&quot; :: EncodedType,
+    UDim = &quot;UDim&quot; :: EncodedType,
+    UDim2 = &quot;UDim2&quot; :: EncodedType,
+    Enum = &quot;Enum&quot; :: EncodedType,
+    BrickColor = &quot;BrickColor&quot; :: EncodedType,
+    NumberRange = &quot;NumberRange&quot; :: EncodedType,
+    NumberSequence = &quot;NumberSequence&quot; :: EncodedType,
+    ColorSequence = &quot;ColorSequence&quot; :: EncodedType,
+    PhysicalProperties = &quot;PhysicalProperties&quot; :: EncodedType,
+    Ref = &quot;Ref&quot; :: EncodedType,
+})
+function encodeValue(value)
+    local valueType = typeof(value)
+    local _sw0 = valueType
+    if _sw0 == &quot;Vector2&quot; then
+        return {[&quot;type&quot;] = EncodedType.Vector2, value = {value.X, value.Y}}
+    elseif _sw0 == &quot;Vector3&quot; then
+        return {[&quot;type&quot;] = EncodedType.Vector3, value = {value.X, value.Y, value.Z}}
+    elseif _sw0 == &quot;CFrame&quot; then
+        local components = {value:GetComponents()}
+        return {[&quot;type&quot;] = EncodedType.CFrame, value = components}
+    elseif _sw0 == &quot;Color3&quot; then
+        return {[&quot;type&quot;] = EncodedType.Color3, value = {value.R, value.G, value.B}}
+    elseif _sw0 == &quot;EnumItem&quot; then
+        return {[&quot;type&quot;] = EncodedType.Enum, [&quot;enum&quot;] = tostring(value.EnumType), value = value.Name}
+    else
+        return {[&quot;type&quot;] = EncodedType.Primitive, value = value}
+    end
+end
+function decodeValue(encoded)
+    local kind = encoded[&quot;type&quot;]
+    local value = encoded.value
+    local enumName = encoded[&quot;enum&quot;]
+    local _sw1 = kind
+    if _sw1 == EncodedType.Vector2 then
+        return Vector2.new(value[1], value[2])
+    elseif _sw1 == EncodedType.Vector3 then
+        return Vector3.new(value[1], value[2], value[3])
+    elseif _sw1 == EncodedType.CFrame then
+        return CFrame.new(unpack(value))
+    elseif _sw1 == EncodedType.Color3 then
+        return Color3.new(value[1], value[2], value[3])
+    elseif _sw1 == EncodedType.Enum then
+        local enumType = Enum[enumName]
+        return enumType[value]
+    else
+        return value
+    end
+end
+return {EncodedType = EncodedType, encodeValue = encodeValue, decodeValue = decodeValue}
+</ProtectedString>
+        </Properties>
+    </Item>
+</roblox>

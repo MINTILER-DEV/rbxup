@@ -1,0 +1,11 @@
+<roblox xmlns:xmime="http://www.w3.org/2005/05/xmlmime" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://www.roblox.com/roblox.xsd" version="4">
+    <Item class="ModuleScript" referent="RBX0">
+        <Properties>
+            <string name="Name">defaults</string>
+            <ProtectedString name="Source">local BundleableClassNames = table.freeze({Part = true, MeshPart = true, UnionOperation = true, Attachment = true, Decal = true, Texture = true, WeldConstraint = true, HingeConstraint = true, BallSocketConstraint = true, RodConstraint = true, RopeConstraint = true, SpringConstraint = true})
+local MainProperties = table.freeze({BasePart = table.freeze({&quot;CFrame&quot;, &quot;Size&quot;, &quot;Anchored&quot;, &quot;CanCollide&quot;, &quot;Color&quot;, &quot;Material&quot;, &quot;Transparency&quot;}), Model = table.freeze({&quot;WorldPivot&quot;, &quot;PrimaryPart&quot;}), Script = table.freeze({&quot;Enabled&quot;, &quot;RunContext&quot;, &quot;Source&quot;}), LocalScript = table.freeze({&quot;Enabled&quot;, &quot;Source&quot;}), ModuleScript = table.freeze({&quot;Source&quot;}), GuiObject = table.freeze({&quot;Size&quot;, &quot;Position&quot;, &quot;AnchorPoint&quot;, &quot;BackgroundTransparency&quot;, &quot;Visible&quot;, &quot;ZIndex&quot;}), ValueBase = table.freeze({&quot;Value&quot;})})
+return {BundleableClassNames = BundleableClassNames, MainProperties = MainProperties}
+</ProtectedString>
+        </Properties>
+    </Item>
+</roblox>

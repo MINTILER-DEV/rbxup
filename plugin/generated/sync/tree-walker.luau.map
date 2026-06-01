@@ -1,6 +1,6 @@
 {
   "version": 1,
   "sourceFile": "D:/GitHub/Repositories/rbxup/plugin/src/sync/tree-walker.xl",
-  "emittedFile": "D:/GitHub/Repositories/rbxup/plugin/generated/src/sync/tree-walker.luau",
+  "emittedFile": "D:/GitHub/Repositories/rbxup/plugin/generated/sync/tree-walker.luau",
   "mappings": []
 }

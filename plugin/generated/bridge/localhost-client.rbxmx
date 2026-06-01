@@ -1,0 +1,17 @@
+<roblox xmlns:xmime="http://www.w3.org/2005/05/xmlmime" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://www.roblox.com/roblox.xsd" version="4">
+    <Item class="ModuleScript" referent="RBX0">
+        <Properties>
+            <string name="Name">localhost-client</string>
+            <ProtectedString name="Source">local Messages = require(script.Parent.Parent.bridge.messages)
+local DEFAULT_HOST = &quot;http://127.0.0.1:49321&quot;
+function buildRequest(command, payload)
+    return {url = DEFAULT_HOST, message = Messages.makeMessage(command, payload)}
+end
+function ping(payload)
+    return buildRequest(Messages.SyncCommand.Doctor, payload)
+end
+return {DEFAULT_HOST = DEFAULT_HOST, buildRequest = buildRequest, ping = ping}
+</ProtectedString>
+        </Properties>
+    </Item>
+</roblox>

@@ -1,11 +1,15 @@
-local Defaults = require(script.Parent.Parent.roblox.defaults)
+<roblox xmlns:xmime="http://www.w3.org/2005/05/xmlmime" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://www.roblox.com/roblox.xsd" version="4">
+    <Item class="ModuleScript" referent="RBX0">
+        <Properties>
+            <string name="Name">bundle-planner</string>
+            <ProtectedString name="Source">local Defaults = require(script.Parent.Parent.roblox.defaults)
 
 function classifyChild(child)
     if Defaults.BundleableClassNames[child.ClassName] then
-        return "bundleable"
+        return &quot;bundleable&quot;
     end
 
-    return "readable"
+    return &quot;readable&quot;
 end
 
 function planChildren(children, threshold)
@@ -14,7 +18,7 @@ function planChildren(children, threshold)
 
     for _, child in children do
         local kind = classifyChild(child)
-        if kind == "readable" then
+        if kind == &quot;readable&quot; then
             table.insert(readable, child)
         else
             local className = string.lower(child.ClassName)
@@ -31,7 +35,7 @@ function planChildren(children, threshold)
     local exploded = {}
 
     for className, bucket in groups do
-        if #bucket >= threshold then
+        if #bucket &gt;= threshold then
             bundled[className] = bucket
         else
             for _, child in bucket do
@@ -51,3 +55,7 @@ return {
     classifyChild = classifyChild,
     planChildren = planChildren,
 }
+</ProtectedString>
+        </Properties>
+    </Item>
+</roblox>

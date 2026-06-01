@@ -1,8 +1,12 @@
-local HttpService = game:GetService("HttpService")
-local ATTRIBUTE_NAME = "rbxup_id"
+<roblox xmlns:xmime="http://www.w3.org/2005/05/xmlmime" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://www.roblox.com/roblox.xsd" version="4">
+    <Item class="ModuleScript" referent="RBX0">
+        <Properties>
+            <string name="Name">stable-ids</string>
+            <ProtectedString name="Source">local HttpService = game:GetService(&quot;HttpService&quot;)
+local ATTRIBUTE_NAME = &quot;rbxup_id&quot;
 function isMissing(value)
     local _lhs0 = (value == nil)
-    return (_lhs0 or (value == ""))
+    return (_lhs0 or (value == &quot;&quot;))
 end
 function ensureStableId(instance)
     local existing = instance:GetAttribute(ATTRIBUTE_NAME)
@@ -18,3 +22,7 @@ function getStableId(instance)
     return instance:GetAttribute(ATTRIBUTE_NAME)
 end
 return {ATTRIBUTE_NAME = ATTRIBUTE_NAME, ensureStableId = ensureStableId, getStableId = getStableId}
+</ProtectedString>
+        </Properties>
+    </Item>
+</roblox>

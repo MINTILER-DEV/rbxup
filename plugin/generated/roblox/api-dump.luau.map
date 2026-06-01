@@ -1,7 +1,7 @@
 {
   "version": 1,
   "sourceFile": "D:/GitHub/Repositories/rbxup/plugin/src/roblox/api-dump.xl",
-  "emittedFile": "D:/GitHub/Repositories/rbxup/plugin/generated/src/roblox/api-dump.luau",
+  "emittedFile": "D:/GitHub/Repositories/rbxup/plugin/generated/roblox/api-dump.luau",
   "mappings": [
     {
       "emittedLine": 1,

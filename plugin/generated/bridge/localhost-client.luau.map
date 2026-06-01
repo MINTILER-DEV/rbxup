@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "sourceFile": "D:/GitHub/Repositories/rbxup/plugin/src/sync/sync-engine.xl",
-  "emittedFile": "D:/GitHub/Repositories/rbxup/plugin/generated/src/sync/sync-engine.luau",
+  "sourceFile": "D:/GitHub/Repositories/rbxup/plugin/src/bridge/localhost-client.xl",
+  "emittedFile": "D:/GitHub/Repositories/rbxup/plugin/generated/bridge/localhost-client.luau",
   "mappings": [
     {
       "emittedLine": 1,
@@ -10,22 +10,22 @@
     },
     {
       "emittedLine": 2,
-      "sourceLine": 2,
-      "sourceCol": 1
-    },
-    {
-      "emittedLine": 3,
       "sourceLine": 3,
       "sourceCol": 1
     },
     {
-      "emittedLine": 4,
+      "emittedLine": 3,
       "sourceLine": 5,
       "sourceCol": 1
     },
     {
+      "emittedLine": 4,
+      "sourceLine": 6,
+      "sourceCol": 1
+    },
+    {
       "emittedLine": 5,
-      "sourceLine": 11,
+      "sourceLine": 6,
       "sourceCol": 1
     },
     {
@@ -40,22 +40,12 @@
     },
     {
       "emittedLine": 8,
-      "sourceLine": 14,
+      "sourceLine": 13,
       "sourceCol": 1
     },
     {
       "emittedLine": 9,
       "sourceLine": 16,
-      "sourceCol": 1
-    },
-    {
-      "emittedLine": 10,
-      "sourceLine": 16,
-      "sourceCol": 1
-    },
-    {
-      "emittedLine": 11,
-      "sourceLine": 23,
       "sourceCol": 1
     }
   ]

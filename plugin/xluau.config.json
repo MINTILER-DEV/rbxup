@@ -4,6 +4,14 @@
   "baseDir": "src",
   "target": "roblox",
   "taskAdapter": "roblox",
+  "robloxOutput": {
+    "projectRbxmx": {
+      "enabled": true,
+      "path": "generated/rbxup-plugin.rbxmx",
+      "rootName": "rbxup",
+      "rootClassName": "Folder"
+    }
+  },
   "paths": {
     "@sync": "./src/sync",
     "@roblox": "./src/roblox",

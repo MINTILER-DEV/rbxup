@@ -1,0 +1,13 @@
+<roblox xmlns:xmime="http://www.w3.org/2005/05/xmlmime" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://www.roblox.com/roblox.xsd" version="4">
+    <Item class="ModuleScript" referent="RBX0">
+        <Properties>
+            <string name="Name">messages</string>
+            <ProtectedString name="Source">local SyncCommand = {Pull = &quot;pull&quot;, Push = &quot;push&quot;, Diff = &quot;diff&quot;, Doctor = &quot;doctor&quot;}
+function makeMessage(command, payload)
+    return {kind = &quot;sync-message&quot;, version = 1, command = command, payload = (if payload ~= nil then payload else {})}
+end
+return {SyncCommand = table.freeze(SyncCommand), makeMessage = makeMessage}
+</ProtectedString>
+        </Properties>
+    </Item>
+</roblox>

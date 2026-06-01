@@ -1,0 +1,24 @@
+<roblox xmlns:xmime="http://www.w3.org/2005/05/xmlmime" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://www.roblox.com/roblox.xsd" version="4">
+    <Item class="ModuleScript" referent="RBX0">
+        <Properties>
+            <string name="Name">panel</string>
+            <ProtectedString name="Source">function buildPanelState()
+    return {
+        title = &quot;rbxup Sync&quot;,
+        status = &quot;idle&quot;,
+        actions = {
+            &quot;Pull&quot;,
+            &quot;Push&quot;,
+            &quot;Diff&quot;,
+            &quot;Doctor&quot;,
+        },
+    }
+end
+
+return {
+    buildPanelState = buildPanelState,
+}
+</ProtectedString>
+        </Properties>
+    </Item>
+</roblox>

@@ -1,7 +1,7 @@
-comptime const ApiDumpUrl = "https://raw.githubusercontent.com/MaximumADHD/Roblox-Client-Tracker/refs/heads/roblox/API-Dump.json"
+local HttpService = game:GetService("HttpService")
 
-comptime const RawApiDump = httpJson(ApiDumpUrl)
-comptime const TrackedClasses = freeze({
+const ApiDumpUrl = "https://raw.githubusercontent.com/MaximumADHD/Roblox-Client-Tracker/refs/heads/roblox/API-Dump.json"
+const TrackedClasses = table.freeze({
     Object = true,
     Instance = true,
     PVInstance = true,
@@ -51,7 +51,10 @@ comptime const TrackedClasses = freeze({
     Folder = true,
 })
 
-comptime function shouldIncludeProperty(member)
+local cachedClassInfoByName = nil
+local cachedLoadError = nil
+
+function shouldIncludeProperty(member)
     if member.MemberType ~= "Property" then
         return false
     end
@@ -64,15 +67,15 @@ comptime function shouldIncludeProperty(member)
     return serialization.CanLoad ~= false or serialization.CanSave ~= false
 end
 
-comptime function shouldTrackClass(className)
+function shouldTrackClass(className)
     return TrackedClasses[className] == true
 end
 
-comptime function buildPropertySet(members)
+function buildPropertySet(members)
     local properties = {}
 
     if members == nil then
-        return freeze(properties)
+        return table.freeze(properties)
     end
 
     for _, member in members do
@@ -81,32 +84,79 @@ comptime function buildPropertySet(members)
         end
     end
 
-    return freeze(properties)
+    return table.freeze(properties)
 end
 
-comptime function buildClassInfoByName(classes)
+function buildClassInfoByName(classes)
     local classInfoByName = {}
 
     for _, classInfo in classes do
         if shouldTrackClass(classInfo.Name) then
-            classInfoByName[classInfo.Name] = freeze({
+            classInfoByName[classInfo.Name] = table.freeze({
                 superclass = classInfo.Superclass,
                 properties = buildPropertySet(classInfo.Members),
             })
         end
     end
 
-    return freeze(classInfoByName)
+    return table.freeze(classInfoByName)
 end
 
-const ClassInfoByName = comptime buildClassInfoByName(RawApiDump.Classes)
+function loadClassInfoByName()
+    if cachedClassInfoByName ~= nil then
+        return cachedClassInfoByName
+    end
+
+    if cachedLoadError ~= nil then
+        return nil
+    end
+
+    local response = nil
+    local okResponse = pcall(function()
+        response = HttpService:GetAsync(ApiDumpUrl)
+    end)
+
+    if not okResponse then
+        cachedLoadError = response
+        return nil
+    end
+
+    local decoded = nil
+    local okDecode = pcall(function()
+        decoded = HttpService:JSONDecode(response)
+    end)
+
+    if not okDecode then
+        cachedLoadError = decoded
+        return nil
+    end
+
+    cachedClassInfoByName = buildClassInfoByName(decoded.Classes ?? {})
+    return cachedClassInfoByName
+end
 
 function getClassInfo(className)
-    return ClassInfoByName[className]
+    local classInfoByName = loadClassInfoByName()
+    if classInfoByName == nil then
+        return nil
+    end
+
+    return classInfoByName[className]
+end
+
+function getLoadError()
+    return cachedLoadError
+end
+
+function refresh()
+    cachedClassInfoByName = nil
+    cachedLoadError = nil
+    return loadClassInfoByName()
 end
 
 return {
     ApiDumpUrl = ApiDumpUrl,
-    ClassInfoByName = ClassInfoByName,
     getClassInfo = getClassInfo,
+    getLoadError = getLoadError,
+    refresh = refresh,
 }

@@ -1,5 +1,95 @@
-local ClassInfoByName = table.freeze({Object = table.freeze({superclass = "<<<ROOT>>>", properties = table.freeze({})}), Instance = table.freeze({superclass = "Object", properties = table.freeze({Capabilities = true, Name = true, Parent = true, SourceAssetId = true, UniqueId = true, archivable = true})}), Attachment = table.freeze({superclass = "Instance", properties = table.freeze({Axis = true, CFrame = true, SecondaryAxis = true, Visible = true, WorldAxis = true, WorldCFrame = true, WorldSecondaryAxis = true})}), Constraint = table.freeze({superclass = "Instance", properties = table.freeze({Attachment0 = true, Attachment1 = true, Color = true, Enabled = true, Visible = true})}), BallSocketConstraint = table.freeze({superclass = "Constraint", properties = table.freeze({LimitsEnabled = true, Radius = true, Restitution = true, TwistLimitsEnabled = true, TwistLowerAngle = true, TwistUpperAngle = true, UpperAngle = true})}), HingeConstraint = table.freeze({superclass = "Constraint", properties = table.freeze({ActuatorType = true, AngularResponsiveness = true, AngularSpeed = true, AngularVelocity = true, CurrentAngle = true, LimitsEnabled = true, LowerAngle = true, MotorMaxAcceleration = true, MotorMaxTorque = true, Radius = true, Restitution = true, ServoMaxTorque = true, SoftlockServoUponReachingTarget = true, TargetAngle = true, UpperAngle = true})}), RodConstraint = table.freeze({superclass = "Constraint", properties = table.freeze({CurrentDistance = true, Length = true, LimitAngle0 = true, LimitAngle1 = true, LimitsEnabled = true, Thickness = true})}), RopeConstraint = table.freeze({superclass = "Constraint", properties = table.freeze({CurrentDistance = true, Length = true, Restitution = true, Thickness = true, WinchEnabled = true, WinchForce = true, WinchResponsiveness = true, WinchSpeed = true, WinchTarget = true})}), SpringConstraint = table.freeze({superclass = "Constraint", properties = table.freeze({Coils = true, CurrentLength = true, Damping = true, FreeLength = true, LimitsEnabled = true, MaxForce = true, MaxLength = true, MinLength = true, Radius = true, Stiffness = true, Thickness = true})}), FaceInstance = table.freeze({superclass = "Instance", properties = table.freeze({Face = true})}), Decal = table.freeze({superclass = "FaceInstance", properties = table.freeze({Color3 = true, MetalnessMap = true, MetalnessMapContent = true, NormalMap = true, NormalMapContent = true, Rotation = true, RoughnessMap = true, RoughnessMapContent = true, Shiny = true, Specular = true, Texture = true, TextureContent = true, TexturePack = true, Transparency = true, UVOffset = true, UVScale = true, ZIndex = true})}), Texture = table.freeze({superclass = "Decal", properties = table.freeze({OffsetStudsU = true, OffsetStudsV = true, StudsPerTileU = true, StudsPerTileV = true})}), Folder = table.freeze({superclass = "Instance", properties = table.freeze({})}), GuiBase = table.freeze({superclass = "Instance", properties = table.freeze({})}), GuiBase2d = table.freeze({superclass = "GuiBase", properties = table.freeze({AutoLocalize = true, Localize = true, RootLocalizationTable = true, SelectionBehaviorDown = true, SelectionBehaviorLeft = true, SelectionBehaviorRight = true, SelectionBehaviorUp = true, SelectionGroup = true})}), GuiObject = table.freeze({superclass = "GuiBase2d", properties = table.freeze({Active = true, AnchorPoint = true, AutomaticSize = true, BackgroundColor = true, BackgroundColor3 = true, BackgroundTransparency = true, BorderColor = true, BorderColor3 = true, BorderMode = true, BorderSizePixel = true, ClipsDescendants = true, Draggable = true, GuiState = true, InputSink = true, Interactable = true, LayoutOrder = true, NextSelectionDown = true, NextSelectionLeft = true, NextSelectionRight = true, NextSelectionUp = true, Position = true, Rotation = true, Selectable = true, SelectionImageObject = true, SelectionOrder = true, Size = true, SizeConstraint = true, Transparency = true, Visible = true, ZIndex = true})}), Frame = table.freeze({superclass = "GuiObject", properties = table.freeze({Style = true})}), GuiButton = table.freeze({superclass = "GuiObject", properties = table.freeze({AutoButtonColor = true, HoverHapticEffect = true, Modal = true, PressHapticEffect = true, Selected = true, Style = true})}), ImageButton = table.freeze({superclass = "GuiButton", properties = table.freeze({HoverImage = true, HoverImageContent = true, Image = true, ImageColor3 = true, ImageContent = true, ImageRectOffset = true, ImageRectSize = true, ImageTransparency = true, PressedImage = true, PressedImageContent = true, ResampleMode = true, ScaleType = true, SliceCenter = true, SliceScale = true, TileSize = true})}), TextButton = table.freeze({superclass = "GuiButton", properties = table.freeze({Font = true, FontFace = true, FontSize = true, LineHeight = true, LocalizationMatchIdentifier = true, LocalizationMatchedSourceText = true, LocalizedText = true, MaxVisibleGraphemes = true, OpenTypeFeatures = true, OpenTypeFeaturesError = true, RichText = true, Text = true, TextColor = true, TextColor3 = true, TextDirection = true, TextScaled = true, TextSize = true, TextStrokeColor3 = true, TextStrokeTransparency = true, TextTransparency = true, TextTruncate = true, TextWrap = true, TextWrapped = true, TextXAlignment = true, TextYAlignment = true})}), GuiLabel = table.freeze({superclass = "GuiObject", properties = table.freeze({})}), ImageLabel = table.freeze({superclass = "GuiLabel", properties = table.freeze({Image = true, ImageColor3 = true, ImageContent = true, ImageRectOffset = true, ImageRectSize = true, ImageTransparency = true, ResampleMode = true, ScaleType = true, SliceCenter = true, SliceScale = true, TileSize = true})}), TextLabel = table.freeze({superclass = "GuiLabel", properties = table.freeze({Font = true, FontFace = true, FontSize = true, LineHeight = true, LocalizationMatchIdentifier = true, LocalizationMatchedSourceText = true, LocalizedText = true, MaxVisibleGraphemes = true, OpenTypeFeatures = true, OpenTypeFeaturesError = true, RichText = true, Text = true, TextColor = true, TextColor3 = true, TextDirection = true, TextScaled = true, TextSize = true, TextStrokeColor3 = true, TextStrokeTransparency = true, TextTransparency = true, TextTruncate = true, TextWrap = true, TextWrapped = true, TextXAlignment = true, TextYAlignment = true})}), LuaSourceContainer = table.freeze({superclass = "Instance", properties = table.freeze({})}), BaseScript = table.freeze({superclass = "LuaSourceContainer", properties = table.freeze({Disabled = true, LinkedSource = true, RunContext = true})}), Script = table.freeze({superclass = "BaseScript", properties = table.freeze({Source = true})}), LocalScript = table.freeze({superclass = "Script", properties = table.freeze({})}), ModuleScript = table.freeze({superclass = "LuaSourceContainer", properties = table.freeze({LinkedSource = true, Source = true})}), PVInstance = table.freeze({superclass = "Instance", properties = table.freeze({})}), BasePart = table.freeze({superclass = "PVInstance", properties = table.freeze({Anchored = true, AssemblyAngularVelocity = true, AssemblyLinearVelocity = true, AudioCanCollide = true, BackParamA = true, BackParamB = true, BackSurface = true, BackSurfaceInput = true, BottomParamA = true, BottomParamB = true, BottomSurface = true, BottomSurfaceInput = true, BrickColor = true, CFrame = true, CanCollide = true, CanQuery = true, CanTouch = true, CastShadow = true, CollisionGroup = true, CollisionGroupId = true, Color = true, CustomPhysicalProperties = true, Elasticity = true, EnableFluidForces = true, Friction = true, FrontParamA = true, FrontParamB = true, FrontSurface = true, FrontSurfaceInput = true, LeftParamA = true, LeftParamB = true, LeftSurface = true, LeftSurfaceInput = true, Locked = true, Massless = true, Material = true, PivotOffset = true, Reflectance = true, RightParamA = true, RightParamB = true, RightSurface = true, RightSurfaceInput = true, RootPriority = true, RotVelocity = true, Rotation = true, Size = true, TopParamA = true, TopParamB = true, TopSurface = true, TopSurfaceInput = true, Transparency = true, Velocity = true, brickColor = true})}), FormFactorPart = table.freeze({superclass = "BasePart", properties = table.freeze({FormFactor = true, formFactor = true})}), Part = table.freeze({superclass = "FormFactorPart", properties = table.freeze({Shape = true})}), TriangleMeshPart = table.freeze({superclass = "BasePart", properties = table.freeze({CollisionFidelity = true, FluidFidelity = true, UnscaledCofm = true, UnscaledVolInertiaDiags = true, UnscaledVolInertiaOffDiags = true, UnscaledVolume = true})}), MeshPart = table.freeze({superclass = "TriangleMeshPart", properties = table.freeze({DoubleSided = true, HasJointOffset = true, HasSkinnedMesh = true, JointOffset = true, MeshContent = true, MeshId = true, RenderFidelity = true, TextureContent = true, TextureID = true})}), PartOperation = table.freeze({superclass = "TriangleMeshPart", properties = table.freeze({RenderFidelity = true, SmoothingAngle = true, TriangleCount = true, UsePartColor = true})}), UnionOperation = table.freeze({superclass = "PartOperation", properties = table.freeze({})}), Model = table.freeze({superclass = "PVInstance", properties = table.freeze({LevelOfDetail = true, ModelStreamingMode = true, PrimaryPart = true})}), ValueBase = table.freeze({superclass = "Instance", properties = table.freeze({})}), BoolValue = table.freeze({superclass = "ValueBase", properties = table.freeze({Value = true})}), CFrameValue = table.freeze({superclass = "ValueBase", properties = table.freeze({Value = true})}), Color3Value = table.freeze({superclass = "ValueBase", properties = table.freeze({Value = true})}), IntValue = table.freeze({superclass = "ValueBase", properties = table.freeze({Value = true})}), NumberValue = table.freeze({superclass = "ValueBase", properties = table.freeze({Value = true})}), ObjectValue = table.freeze({superclass = "ValueBase", properties = table.freeze({Value = true})}), StringValue = table.freeze({superclass = "ValueBase", properties = table.freeze({Value = true})}), Vector3Value = table.freeze({superclass = "ValueBase", properties = table.freeze({Value = true})}), WeldConstraint = table.freeze({superclass = "Instance", properties = table.freeze({Active = true, Enabled = true, Part0 = true, Part1 = true})})})
-function getClassInfo(className)
-    return ClassInfoByName[className]
+local HttpService = game:GetService("HttpService")
+local ApiDumpUrl = "https://raw.githubusercontent.com/MaximumADHD/Roblox-Client-Tracker/refs/heads/roblox/API-Dump.json"
+local TrackedClasses = table.freeze({Object = true, Instance = true, PVInstance = true, Model = true, BasePart = true, FormFactorPart = true, TriangleMeshPart = true, PartOperation = true, Part = true, MeshPart = true, UnionOperation = true, Attachment = true, FaceInstance = true, Decal = true, Texture = true, Constraint = true, WeldConstraint = true, HingeConstraint = true, BallSocketConstraint = true, RodConstraint = true, RopeConstraint = true, SpringConstraint = true, LuaSourceContainer = true, BaseScript = true, Script = true, LocalScript = true, ModuleScript = true, GuiBase = true, GuiBase2d = true, GuiObject = true, GuiLabel = true, GuiButton = true, Frame = true, TextLabel = true, TextButton = true, ImageLabel = true, ImageButton = true, ValueBase = true, StringValue = true, IntValue = true, NumberValue = true, BoolValue = true, ObjectValue = true, Vector3Value = true, Color3Value = true, CFrameValue = true, Folder = true})
+local cachedClassInfoByName = nil
+local cachedLoadError = nil
+function shouldIncludeProperty(member)
+    local _cond0 = (member.MemberType ~= "Property")
+    if _cond0 then
+        return false
+    end
+    local serialization = member.Serialization
+    local _cond1 = (serialization == nil)
+    if _cond1 then
+        return true
+    end
+    local _lhs2 = (serialization.CanLoad ~= false)
+    return (_lhs2 or (serialization.CanSave ~= false))
 end
-return {ApiDumpUrl = ApiDumpUrl, ClassInfoByName = ClassInfoByName, getClassInfo = getClassInfo}
+function shouldTrackClass(className)
+    return (TrackedClasses[className] == true)
+end
+function buildPropertySet(members)
+    local properties = {}
+    local _cond3 = (members == nil)
+    if _cond3 then
+        return table.freeze(properties)
+    end
+    for _, member in members do
+        local _cond4 = shouldIncludeProperty(member)
+        if _cond4 then
+            local _idx5 = member.Name
+            properties[_idx5] = true
+        end
+    end
+    return table.freeze(properties)
+end
+function buildClassInfoByName(classes)
+    local classInfoByName = {}
+    for _, classInfo in classes do
+        local _cond6 = shouldTrackClass(classInfo.Name)
+        if _cond6 then
+            local _idx7 = classInfo.Name
+            classInfoByName[_idx7] = table.freeze({superclass = classInfo.Superclass, properties = buildPropertySet(classInfo.Members)})
+        end
+    end
+    return table.freeze(classInfoByName)
+end
+function loadClassInfoByName()
+    local _cond8 = (cachedClassInfoByName ~= nil)
+    if _cond8 then
+        return cachedClassInfoByName
+    end
+    local _cond9 = (cachedLoadError ~= nil)
+    if _cond9 then
+        return nil
+    end
+    local response = nil
+    local okResponse = pcall(function()
+    response = HttpService:GetAsync(ApiDumpUrl)
+end)
+    local _cond10 = (not okResponse)
+    if _cond10 then
+        cachedLoadError = response
+        return nil
+    end
+    local decoded = nil
+    local okDecode = pcall(function()
+    decoded = HttpService:JSONDecode(response)
+end)
+    local _cond11 = (not okDecode)
+    if _cond11 then
+        cachedLoadError = decoded
+        return nil
+    end
+    local _lhs12 = decoded.Classes
+    cachedClassInfoByName = buildClassInfoByName((if _lhs12 ~= nil then _lhs12 else {}))
+    return cachedClassInfoByName
+end
+function getClassInfo(className)
+    local classInfoByName = loadClassInfoByName()
+    local _cond13 = (classInfoByName == nil)
+    if _cond13 then
+        return nil
+    end
+    return classInfoByName[className]
+end
+function getLoadError()
+    return cachedLoadError
+end
+function refresh()
+    cachedClassInfoByName = nil
+    cachedLoadError = nil
+    return loadClassInfoByName()
+end
+return {ApiDumpUrl = ApiDumpUrl, getClassInfo = getClassInfo, getLoadError = getLoadError, refresh = refresh}

@@ -1,7 +1,7 @@
 {
   "version": 1,
   "sourceFile": "D:/GitHub/Repositories/rbxup/plugin/src/bridge/localhost-client.xl",
-  "emittedFile": "D:/GitHub/Repositories/rbxup/plugin/generated/bridge/localhost-client.luau",
+  "emittedFile": "D:/GitHub/Repositories/rbxup/plugin/generated/bridge/localhost_client.luau",
   "mappings": [
     {
       "emittedLine": 1,

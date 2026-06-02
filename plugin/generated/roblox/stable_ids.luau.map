@@ -1,7 +1,7 @@
 {
   "version": 1,
   "sourceFile": "D:/GitHub/Repositories/rbxup/plugin/src/roblox/stable-ids.xl",
-  "emittedFile": "D:/GitHub/Repositories/rbxup/plugin/generated/roblox/stable-ids.luau",
+  "emittedFile": "D:/GitHub/Repositories/rbxup/plugin/generated/roblox/stable_ids.luau",
   "mappings": [
     {
       "emittedLine": 1,

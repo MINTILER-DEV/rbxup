@@ -2,7 +2,7 @@
     <Item class="LocalScript" referent="RBX0">
         <Properties>
             <string name="Name">plugin</string>
-            <ProtectedString name="Source">local Main = require(script.Parent.main)
+            <ProtectedString name="Source">local Main = require(script.main)
 local State = Main.createPluginState() -- variable not really needed but created anyway for future things
 </ProtectedString>
         </Properties>

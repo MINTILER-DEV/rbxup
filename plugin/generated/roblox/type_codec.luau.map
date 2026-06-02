@@ -1,7 +1,7 @@
 {
   "version": 1,
   "sourceFile": "D:/GitHub/Repositories/rbxup/plugin/src/roblox/type-codec.xl",
-  "emittedFile": "D:/GitHub/Repositories/rbxup/plugin/generated/roblox/type-codec.luau",
+  "emittedFile": "D:/GitHub/Repositories/rbxup/plugin/generated/roblox/type_codec.luau",
   "mappings": [
     {
       "emittedLine": 1,

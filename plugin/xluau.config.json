@@ -18,7 +18,6 @@
     "@sync": "./src/sync",
     "@roblox": "./src/roblox",
     "@bridge": "./src/bridge",
-    "@ui": "./src/ui",
-    "@root": "./src"
+    "@ui": "./src/ui"
   }
 }

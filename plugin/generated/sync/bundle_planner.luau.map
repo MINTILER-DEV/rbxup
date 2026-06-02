@@ -1,6 +1,6 @@
 {
   "version": 1,
   "sourceFile": "D:/GitHub/Repositories/rbxup/plugin/src/sync/bundle-planner.xl",
-  "emittedFile": "D:/GitHub/Repositories/rbxup/plugin/generated/sync/bundle-planner.luau",
+  "emittedFile": "D:/GitHub/Repositories/rbxup/plugin/generated/sync/bundle_planner.luau",
   "mappings": []
 }

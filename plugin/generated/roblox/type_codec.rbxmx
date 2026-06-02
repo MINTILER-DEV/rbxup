@@ -1,7 +1,7 @@
 <roblox xmlns:xmime="http://www.w3.org/2005/05/xmlmime" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://www.roblox.com/roblox.xsd" version="4">
     <Item class="ModuleScript" referent="RBX0">
         <Properties>
-            <string name="Name">type-codec</string>
+            <string name="Name">type_codec</string>
             <ProtectedString name="Source">type EncodedType = &quot;Primitive&quot; | &quot;Vector2&quot; | &quot;Vector3&quot; | &quot;CFrame&quot; | &quot;Color3&quot; | &quot;UDim&quot; | &quot;UDim2&quot; | &quot;Enum&quot; | &quot;BrickColor&quot; | &quot;NumberRange&quot; | &quot;NumberSequence&quot; | &quot;ColorSequence&quot; | &quot;PhysicalProperties&quot; | &quot;Ref&quot;
 local EncodedType = table.freeze({
     Primitive = &quot;Primitive&quot; :: EncodedType,

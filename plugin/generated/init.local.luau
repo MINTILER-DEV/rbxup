@@ -1,2 +1,2 @@
-local Main = require(script.Parent.main)
+local Main = require(script.main)
 local State = Main.createPluginState() -- variable not really needed but created anyway for future things

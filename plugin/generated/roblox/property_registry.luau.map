@@ -1,7 +1,7 @@
 {
   "version": 1,
   "sourceFile": "D:/GitHub/Repositories/rbxup/plugin/src/roblox/property-registry.xl",
-  "emittedFile": "D:/GitHub/Repositories/rbxup/plugin/generated/roblox/property-registry.luau",
+  "emittedFile": "D:/GitHub/Repositories/rbxup/plugin/generated/roblox/property_registry.luau",
   "mappings": [
     {
       "emittedLine": 1,

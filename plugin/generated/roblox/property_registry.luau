@@ -1,8 +1,4 @@
-<roblox xmlns:xmime="http://www.w3.org/2005/05/xmlmime" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://www.roblox.com/roblox.xsd" version="4">
-    <Item class="ModuleScript" referent="RBX0">
-        <Properties>
-            <string name="Name">property-registry</string>
-            <ProtectedString name="Source">local ApiDump = require(script.Parent.Parent.roblox.api-dump)
+local ApiDump = require(script.Parent.Parent.roblox.api_dump)
 local Defaults = require(script.Parent.Parent.roblox.defaults)
 function appendMissingProperties(target, seen, properties)
     local _cond0 = (properties == nil)
@@ -38,13 +34,13 @@ function getKnownProperties(className)
             break
         end
         appendMissingProperties(merged, seenProperties, classInfo.properties)
-        local _cond8 = (classInfo.superclass == &quot;&lt;&lt;&lt;ROOT&gt;&gt;&gt;&quot;)
+        local _cond8 = (classInfo.superclass == "<<<ROOT>>>")
         if _cond8 then
             break
         end
         currentClassName = classInfo.superclass
     end
-    local _cond9 = ((#merged) &gt; 0)
+    local _cond9 = ((#merged) > 0)
     if _cond9 then
         table.sort(merged)
         return merged
@@ -53,7 +49,3 @@ function getKnownProperties(className)
     return (if _lhs10 ~= nil then _lhs10 else {})
 end
 return {getKnownProperties = getKnownProperties}
-</ProtectedString>
-        </Properties>
-    </Item>
-</roblox>

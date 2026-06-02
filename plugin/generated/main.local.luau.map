@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "sourceFile": "D:/GitHub/Repositories/rbxup/plugin/src/main.xl",
-  "emittedFile": "D:/GitHub/Repositories/rbxup/plugin/generated/main.luau",
+  "sourceFile": "D:/GitHub/Repositories/rbxup/plugin/src/main.local.xl",
+  "emittedFile": "D:/GitHub/Repositories/rbxup/plugin/generated/main.local.luau",
   "mappings": [
     {
       "emittedLine": 1,

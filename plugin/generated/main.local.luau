@@ -1,6 +1,6 @@
 local Panel = require(script.Parent.ui.panel)
-local LocalhostClient = require(script.Parent.bridge.localhost-client)
-local SyncEngine = require(script.Parent.sync.sync-engine)
+local LocalhostClient = require(script.Parent.bridge.localhost_client)
+local SyncEngine = require(script.Parent.sync.sync_engine)
 local PluginState = table.freeze({name = "rbxup Sync", version = 1})
 function createPluginState()
     local panel = Panel.buildPanelState()

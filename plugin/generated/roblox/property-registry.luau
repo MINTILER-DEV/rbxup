@@ -1,4 +1,4 @@
-local ApiDump = require(script.Parent.Parent.roblox.api-dump)
+local ApiDump = require(script.Parent.Parent.roblox.api_dump)
 local Defaults = require(script.Parent.Parent.roblox.defaults)
 function appendMissingProperties(target, seen, properties)
     local _cond0 = (properties == nil)

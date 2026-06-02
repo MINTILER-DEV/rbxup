@@ -9,7 +9,7 @@
             </Properties>
             <Item class="ModuleScript" referent="RBX2">
                 <Properties>
-                    <string name="Name">localhost-client</string>
+                    <string name="Name">localhost_client</string>
                     <ProtectedString name="Source">local Messages = require(script.Parent.Parent.bridge.messages)
 local DEFAULT_HOST = &quot;http://127.0.0.1:49321&quot;
 function buildRequest(command, payload)
@@ -34,12 +34,12 @@ return {SyncCommand = table.freeze(SyncCommand), makeMessage = makeMessage}
                 </Properties>
             </Item>
         </Item>
-        <Item class="ModuleScript" referent="RBX4">
+        <Item class="LocalScript" referent="RBX4">
             <Properties>
                 <string name="Name">main</string>
                 <ProtectedString name="Source">local Panel = require(script.Parent.ui.panel)
-local LocalhostClient = require(script.Parent.bridge.localhost-client)
-local SyncEngine = require(script.Parent.sync.sync-engine)
+local LocalhostClient = require(script.Parent.bridge.localhost_client)
+local SyncEngine = require(script.Parent.sync.sync_engine)
 local PluginState = table.freeze({name = &quot;rbxup Sync&quot;, version = 1})
 function createPluginState()
     local panel = Panel.buildPanelState()
@@ -56,7 +56,7 @@ return {createPluginState = createPluginState}
             </Properties>
             <Item class="ModuleScript" referent="RBX6">
                 <Properties>
-                    <string name="Name">api-dump</string>
+                    <string name="Name">api_dump</string>
                     <ProtectedString name="Source">local HttpService = game:GetService(&quot;HttpService&quot;)
 local ApiDumpUrl = &quot;https://raw.githubusercontent.com/MaximumADHD/Roblox-Client-Tracker/refs/heads/roblox/API-Dump.json&quot;
 local TrackedClasses = table.freeze({Object = true, Instance = true, PVInstance = true, Model = true, BasePart = true, FormFactorPart = true, TriangleMeshPart = true, PartOperation = true, Part = true, MeshPart = true, UnionOperation = true, Attachment = true, FaceInstance = true, Decal = true, Texture = true, Constraint = true, WeldConstraint = true, HingeConstraint = true, BallSocketConstraint = true, RodConstraint = true, RopeConstraint = true, SpringConstraint = true, LuaSourceContainer = true, BaseScript = true, Script = true, LocalScript = true, ModuleScript = true, GuiBase = true, GuiBase2d = true, GuiObject = true, GuiLabel = true, GuiButton = true, Frame = true, TextLabel = true, TextButton = true, ImageLabel = true, ImageButton = true, ValueBase = true, StringValue = true, IntValue = true, NumberValue = true, BoolValue = true, ObjectValue = true, Vector3Value = true, Color3Value = true, CFrameValue = true, Folder = true})
@@ -166,8 +166,8 @@ return {BundleableClassNames = BundleableClassNames, MainProperties = MainProper
             </Item>
             <Item class="ModuleScript" referent="RBX8">
                 <Properties>
-                    <string name="Name">property-registry</string>
-                    <ProtectedString name="Source">local ApiDump = require(script.Parent.Parent.roblox.api-dump)
+                    <string name="Name">property_registry</string>
+                    <ProtectedString name="Source">local ApiDump = require(script.Parent.Parent.roblox.api_dump)
 local Defaults = require(script.Parent.Parent.roblox.defaults)
 function appendMissingProperties(target, seen, properties)
     local _cond0 = (properties == nil)
@@ -223,7 +223,7 @@ return {getKnownProperties = getKnownProperties}
             </Item>
             <Item class="ModuleScript" referent="RBX9">
                 <Properties>
-                    <string name="Name">stable-ids</string>
+                    <string name="Name">stable_ids</string>
                     <ProtectedString name="Source">local HttpService = game:GetService(&quot;HttpService&quot;)
 local ATTRIBUTE_NAME = &quot;rbxup_id&quot;
 function isMissing(value)
@@ -249,7 +249,7 @@ return {ATTRIBUTE_NAME = ATTRIBUTE_NAME, ensureStableId = ensureStableId, getSta
             </Item>
             <Item class="ModuleScript" referent="RBX10">
                 <Properties>
-                    <string name="Name">type-codec</string>
+                    <string name="Name">type_codec</string>
                     <ProtectedString name="Source">type EncodedType = &quot;Primitive&quot; | &quot;Vector2&quot; | &quot;Vector3&quot; | &quot;CFrame&quot; | &quot;Color3&quot; | &quot;UDim&quot; | &quot;UDim2&quot; | &quot;Enum&quot; | &quot;BrickColor&quot; | &quot;NumberRange&quot; | &quot;NumberSequence&quot; | &quot;ColorSequence&quot; | &quot;PhysicalProperties&quot; | &quot;Ref&quot;
 local EncodedType = table.freeze({
     Primitive = &quot;Primitive&quot; :: EncodedType,
@@ -316,7 +316,7 @@ return {EncodedType = EncodedType, encodeValue = encodeValue, decodeValue = deco
             </Properties>
             <Item class="ModuleScript" referent="RBX12">
                 <Properties>
-                    <string name="Name">bundle-planner</string>
+                    <string name="Name">bundle_planner</string>
                     <ProtectedString name="Source">local Defaults = require(script.Parent.Parent.roblox.defaults)
 
 function classifyChild(child)
@@ -376,7 +376,7 @@ return {
             <Item class="ModuleScript" referent="RBX13">
                 <Properties>
                     <string name="Name">deserializer</string>
-                    <ProtectedString name="Source">local TypeCodec = require(script.Parent.Parent.roblox.type-codec)
+                    <ProtectedString name="Source">local TypeCodec = require(script.Parent.Parent.roblox.type_codec)
 
 function applyProperties(instance, properties)
     for propertyName, encoded in properties do
@@ -398,8 +398,8 @@ return {
             <Item class="ModuleScript" referent="RBX14">
                 <Properties>
                     <string name="Name">serializer</string>
-                    <ProtectedString name="Source">local StableIds = require(script.Parent.Parent.roblox.stable-ids)
-local TypeCodec = require(script.Parent.Parent.roblox.type-codec)
+                    <ProtectedString name="Source">local StableIds = require(script.Parent.Parent.roblox.stable_ids)
+local TypeCodec = require(script.Parent.Parent.roblox.type_codec)
 
 function serializeInstance(instance)
     local id = StableIds.getStableId(instance)
@@ -427,10 +427,10 @@ return {
             </Item>
             <Item class="ModuleScript" referent="RBX15">
                 <Properties>
-                    <string name="Name">sync-engine</string>
-                    <ProtectedString name="Source">local BundlePlanner = require(script.Parent.Parent.sync.bundle-planner)
+                    <string name="Name">sync_engine</string>
+                    <ProtectedString name="Source">local BundlePlanner = require(script.Parent.Parent.sync.bundle_planner)
 local Serializer = require(script.Parent.Parent.sync.serializer)
-local TreeWalker = require(script.Parent.Parent.sync.tree-walker)
+local TreeWalker = require(script.Parent.Parent.sync.tree_walker)
 local DEFAULT_SYNC_CONFIG = table.freeze({bundleThreshold = 20, bundleGrouping = &quot;className&quot;, smallBundleBehavior = &quot;explode&quot;})
 function previewPull(root)
     local children = root:GetChildren()
@@ -444,8 +444,8 @@ return {DEFAULT_SYNC_CONFIG = DEFAULT_SYNC_CONFIG, previewPull = previewPull}
             </Item>
             <Item class="ModuleScript" referent="RBX16">
                 <Properties>
-                    <string name="Name">tree-walker</string>
-                    <ProtectedString name="Source">local StableIds = require(script.Parent.Parent.roblox.stable-ids)
+                    <string name="Name">tree_walker</string>
+                    <ProtectedString name="Source">local StableIds = require(script.Parent.Parent.roblox.stable_ids)
 
 function walkInstanceTree(root)
     local results = {}

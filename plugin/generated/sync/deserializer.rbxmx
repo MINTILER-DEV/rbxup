@@ -2,7 +2,7 @@
     <Item class="ModuleScript" referent="RBX0">
         <Properties>
             <string name="Name">deserializer</string>
-            <ProtectedString name="Source">local TypeCodec = require(script.Parent.Parent.roblox.type_codec)
+            <ProtectedString name="Source">local TypeCodec = require(script.Parent.Parent.roblox.type-codec)
 
 function applyProperties(instance, properties)
     for propertyName, encoded in properties do

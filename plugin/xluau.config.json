@@ -1,5 +1,7 @@
 {
-  "include": ["src/**/*.xl"],
+  "include": [
+    "src/**/*.xl"
+  ],
   "outDir": "generated",
   "baseDir": "src",
   "target": "roblox",
@@ -16,6 +18,7 @@
     "@sync": "./src/sync",
     "@roblox": "./src/roblox",
     "@bridge": "./src/bridge",
-    "@ui": "./src/ui"
+    "@ui": "./src/ui",
+    "@root": "./src"
   }
 }

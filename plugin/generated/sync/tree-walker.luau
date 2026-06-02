@@ -1,4 +1,4 @@
-local StableIds = require(script.Parent.Parent.roblox.stable_ids)
+local StableIds = require(script.Parent.Parent.roblox.stable-ids)
 
 function walkInstanceTree(root)
     local results = {}

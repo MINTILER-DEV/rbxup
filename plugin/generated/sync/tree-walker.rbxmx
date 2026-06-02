@@ -1,8 +1,8 @@
 <roblox xmlns:xmime="http://www.w3.org/2005/05/xmlmime" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://www.roblox.com/roblox.xsd" version="4">
     <Item class="ModuleScript" referent="RBX0">
         <Properties>
-            <string name="Name">tree_walker</string>
-            <ProtectedString name="Source">local StableIds = require(script.Parent.Parent.roblox.stable_ids)
+            <string name="Name">tree-walker</string>
+            <ProtectedString name="Source">local StableIds = require(script.Parent.Parent.roblox.stable-ids)
 
 function walkInstanceTree(root)
     local results = {}

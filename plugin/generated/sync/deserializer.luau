@@ -1,4 +1,4 @@
-local TypeCodec = require(script.Parent.Parent.roblox.type_codec)
+local TypeCodec = require(script.Parent.Parent.roblox.type-codec)
 
 function applyProperties(instance, properties)
     for propertyName, encoded in properties do

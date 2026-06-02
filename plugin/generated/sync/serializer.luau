@@ -1,5 +1,5 @@
-local StableIds = require(script.Parent.Parent.roblox.stable_ids)
-local TypeCodec = require(script.Parent.Parent.roblox.type_codec)
+local StableIds = require(script.Parent.Parent.roblox.stable-ids)
+local TypeCodec = require(script.Parent.Parent.roblox.type-codec)
 
 function serializeInstance(instance)
     local id = StableIds.getStableId(instance)

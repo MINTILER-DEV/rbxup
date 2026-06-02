@@ -1,8 +1,8 @@
 <roblox xmlns:xmime="http://www.w3.org/2005/05/xmlmime" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://www.roblox.com/roblox.xsd" version="4">
     <Item class="ModuleScript" referent="RBX0">
         <Properties>
-            <string name="Name">property_registry</string>
-            <ProtectedString name="Source">local ApiDump = require(script.Parent.Parent.roblox.api_dump)
+            <string name="Name">property-registry</string>
+            <ProtectedString name="Source">local ApiDump = require(script.Parent.Parent.roblox.api-dump)
 local Defaults = require(script.Parent.Parent.roblox.defaults)
 function appendMissingProperties(target, seen, properties)
     local _cond0 = (properties == nil)

@@ -1,0 +1,18 @@
+<roblox xmlns:xmime="http://www.w3.org/2005/05/xmlmime" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://www.roblox.com/roblox.xsd" version="4">
+    <Item class="ModuleScript" referent="RBX0">
+        <Properties>
+            <string name="Name">main</string>
+            <ProtectedString name="Source">local Panel = require(script.Parent.ui.panel)
+local LocalhostClient = require(script.Parent.bridge.localhost-client)
+local SyncEngine = require(script.Parent.sync.sync-engine)
+local PluginState = table.freeze({name = &quot;rbxup Sync&quot;, version = 1})
+function createPluginState()
+    local panel = Panel.buildPanelState()
+    local bridge = LocalhostClient.ping({source = &quot;plugin&quot;})
+    return {plugin = PluginState, panel = panel, bridge = bridge, syncConfig = SyncEngine.DEFAULT_SYNC_CONFIG}
+end
+return {createPluginState = createPluginState}
+</ProtectedString>
+        </Properties>
+    </Item>
+</roblox>

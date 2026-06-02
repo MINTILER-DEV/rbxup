@@ -1,7 +1,7 @@
 <roblox xmlns:xmime="http://www.w3.org/2005/05/xmlmime" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://www.roblox.com/roblox.xsd" version="4">
     <Item class="ModuleScript" referent="RBX0">
         <Properties>
-            <string name="Name">api_dump</string>
+            <string name="Name">api-dump</string>
             <ProtectedString name="Source">local HttpService = game:GetService(&quot;HttpService&quot;)
 local ApiDumpUrl = &quot;https://raw.githubusercontent.com/MaximumADHD/Roblox-Client-Tracker/refs/heads/roblox/API-Dump.json&quot;
 local TrackedClasses = table.freeze({Object = true, Instance = true, PVInstance = true, Model = true, BasePart = true, FormFactorPart = true, TriangleMeshPart = true, PartOperation = true, Part = true, MeshPart = true, UnionOperation = true, Attachment = true, FaceInstance = true, Decal = true, Texture = true, Constraint = true, WeldConstraint = true, HingeConstraint = true, BallSocketConstraint = true, RodConstraint = true, RopeConstraint = true, SpringConstraint = true, LuaSourceContainer = true, BaseScript = true, Script = true, LocalScript = true, ModuleScript = true, GuiBase = true, GuiBase2d = true, GuiObject = true, GuiLabel = true, GuiButton = true, Frame = true, TextLabel = true, TextButton = true, ImageLabel = true, ImageButton = true, ValueBase = true, StringValue = true, IntValue = true, NumberValue = true, BoolValue = true, ObjectValue = true, Vector3Value = true, Color3Value = true, CFrameValue = true, Folder = true})

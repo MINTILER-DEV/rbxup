@@ -1,6 +1,6 @@
-local BundlePlanner = require(script.Parent.Parent.sync.bundle_planner)
+local BundlePlanner = require(script.Parent.Parent.sync.bundle-planner)
 local Serializer = require(script.Parent.Parent.sync.serializer)
-local TreeWalker = require(script.Parent.Parent.sync.tree_walker)
+local TreeWalker = require(script.Parent.Parent.sync.tree-walker)
 local DEFAULT_SYNC_CONFIG = table.freeze({bundleThreshold = 20, bundleGrouping = "className", smallBundleBehavior = "explode"})
 function previewPull(root)
     local children = root:GetChildren()

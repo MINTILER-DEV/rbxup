@@ -1,0 +1,57 @@
+{
+  "version": 1,
+  "sourceFile": "D:/GitHub/Repositories/rbxup/plugin/src/main.xl",
+  "emittedFile": "D:/GitHub/Repositories/rbxup/plugin/generated/main.luau",
+  "mappings": [
+    {
+      "emittedLine": 1,
+      "sourceLine": 1,
+      "sourceCol": 1
+    },
+    {
+      "emittedLine": 2,
+      "sourceLine": 2,
+      "sourceCol": 1
+    },
+    {
+      "emittedLine": 3,
+      "sourceLine": 3,
+      "sourceCol": 1
+    },
+    {
+      "emittedLine": 4,
+      "sourceLine": 5,
+      "sourceCol": 1
+    },
+    {
+      "emittedLine": 5,
+      "sourceLine": 10,
+      "sourceCol": 1
+    },
+    {
+      "emittedLine": 6,
+      "sourceLine": 11,
+      "sourceCol": 1
+    },
+    {
+      "emittedLine": 7,
+      "sourceLine": 12,
+      "sourceCol": 1
+    },
+    {
+      "emittedLine": 8,
+      "sourceLine": 16,
+      "sourceCol": 1
+    },
+    {
+      "emittedLine": 9,
+      "sourceLine": 16,
+      "sourceCol": 1
+    },
+    {
+      "emittedLine": 10,
+      "sourceLine": 24,
+      "sourceCol": 1
+    }
+  ]
+}
